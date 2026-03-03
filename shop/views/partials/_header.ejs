@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= typeof title !== 'undefined' ? title + ' — MF Depur Shop' : 'MF Depur Shop' %></title>
+
+  <!-- Font: stesso del sito di vetrina -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Mulish:wght@300;400;500;600;700;800&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Icone: stesso CDN del sito di vetrina -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+  <link rel="stylesheet" href="/css/shop.css">
+  <link rel="icon" type="image/x-icon" href="/img/favicon.ico">
+  <%- typeof extraHead !== 'undefined' ? extraHead : '' %>
+</head>
+<body>
+
+<header id="shop-navbar">
+  <div class="shop-nav-inner">
+    <a href="/" class="shop-nav-brand">
+      <img src="https://www.mfdepur.com/assets/images/logo_no_bg.png" alt="MF Depur" height="36">
+      <span>MF Depur</span>
+    </a>
+
+    <nav class="shop-nav-links">
+      <a href="/" class="shop-nav-link shop-nav-back">
+        <i class="fa-solid fa-arrow-left"></i> Sito
+      </a>
+      <a href="/shop" class="shop-nav-link <%= currentPath === '/shop' ? 'active' : '' %>">
+        <i class="fa-solid fa-flask"></i> Catalogo
+      </a>
+      <% if (currentUser) { %>
+        <% if (currentUser.role === 'ADMIN') { %>
+          <a href="/admin" class="shop-nav-link">
+            <i class="fa-solid fa-screwdriver-wrench"></i> Admin
+          </a>
+        <% } %>
+        <a href="/account" class="shop-nav-link <%= currentPath.startsWith('/account') ? 'active' : '' %>">
+          <i class="fa-solid fa-user"></i> Account
+        </a>
+        <a href="/shop/cart" class="shop-nav-link shop-nav-cart <%= currentPath === '/shop/cart' ? 'active' : '' %>">
+          <i class="fa-solid fa-cart-shopping"></i>
+          <% if (cartCount > 0) { %>
+            <span class="shop-cart-badge" id="navCartBadge"><%= cartCount %></span>
+          <% } else { %>
+            <span class="shop-cart-badge" id="navCartBadge" style="display:none">0</span>
+          <% } %>
+        </a>
+        <form action="/auth/logout" method="POST" style="display:inline;margin:0">
+          <button type="submit" class="shop-nav-btn-link">
+            <i class="fa-solid fa-right-from-bracket"></i> Esci
+          </button>
+        </form>
+      <% } else { %>
+        <a href="/shop/cart" class="shop-nav-link shop-nav-cart <%= currentPath === '/shop/cart' ? 'active' : '' %>">
+          <i class="fa-solid fa-cart-shopping"></i>
+          <span class="shop-cart-badge" id="navCartBadge" style="display:none">0</span>
+        </a>
+        <a href="/auth/login" class="shop-nav-link">Accedi</a>
+        <a href="/auth/register" class="shop-nav-cta">Registra azienda</a>
+      <% } %>
+    </nav>
+
+    <!-- Hamburger mobile -->
+    <button class="shop-hamburger" id="shopHamburger" aria-label="Menu" aria-expanded="false">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+
+  <!-- Mobile menu -->
+  <div class="shop-mobile-menu" id="shopMobileMenu">
+    <a href="/" class="shop-mobile-link"><i class="fa-solid fa-arrow-left"></i> Torna al sito</a>
+    <a href="/shop" class="shop-mobile-link">Catalogo prodotti</a>
+    <% if (currentUser) { %>
+      <% if (currentUser.role === 'ADMIN') { %>
+        <a href="/admin" class="shop-mobile-link">Admin</a>
+      <% } %>
+      <a href="/account" class="shop-mobile-link">Il mio account</a>
+      <a href="/shop/cart" class="shop-mobile-link">Carrello<span id="mobileCartCount"><% if (cartCount > 0) { %> (<%= cartCount %>)<% } %></span></a>
+      <form action="/auth/logout" method="POST" style="margin:0">
+        <button type="submit" class="shop-mobile-link shop-mobile-logout">Esci</button>
+      </form>
+    <% } else { %>
+      <a href="/shop/cart" class="shop-mobile-link">Carrello<span id="mobileCartCount"></span></a>
+      <a href="/auth/login" class="shop-mobile-link">Accedi</a>
+      <a href="/auth/register" class="shop-mobile-link shop-mobile-cta">Registra azienda</a>
+    <% } %>
+  </div>
+</header>
+
+<main class="shop-main">
+
+<script>
+  // Config utente per shop.js
+  window.SHOP = {
+    loggedIn: <%= !!currentUser %>,
+    approved: <%= !!(currentUser && currentUser.company && currentUser.company.status === 'APPROVED') %>
+  };
+
+  // Mobile menu toggle
+  document.getElementById('shopHamburger').addEventListener('click', function() {
+    const menu = document.getElementById('shopMobileMenu');
+    const expanded = this.getAttribute('aria-expanded') === 'true';
+    this.setAttribute('aria-expanded', !expanded);
+    this.classList.toggle('open');
+    menu.classList.toggle('open');
+  });
+</script>

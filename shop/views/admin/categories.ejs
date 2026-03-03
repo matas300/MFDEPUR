@@ -1,0 +1,97 @@
+<%- include('../partials/_admin-header', { title: 'Categorie' }) %>
+
+<div class="order-detail-grid">
+  <!-- Lista categorie -->
+  <div>
+    <% if (!categories || categories.length === 0) { %>
+      <div class="empty-state"><p>Nessuna categoria. Creane una!</p></div>
+    <% } else { %>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Nome</th>
+            <th>Slug</th>
+            <th>Ordine</th>
+            <th>Prodotti</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <% categories.forEach(cat => { %>
+            <tr>
+              <td><strong><%= cat.name %></strong></td>
+              <td><code><%= cat.slug %></code></td>
+              <td><%= cat.sortOrder %></td>
+              <td><%= cat._count ? cat._count.products : '—' %></td>
+              <td>
+                <button class="btn btn-outline btn-sm" onclick="editCategory('<%= cat.id %>', '<%= cat.name.replace(/'/g, "\\'") %>', '<%= cat.sortOrder %>')">
+                  Modifica
+                </button>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    <% } %>
+  </div>
+
+  <!-- Form nuova / modifica categoria -->
+  <div class="admin-sidebar-panel">
+    <div id="form-title-new">
+      <h3>Nuova categoria</h3>
+    </div>
+    <div id="form-title-edit" style="display:none">
+      <h3>Modifica categoria</h3>
+    </div>
+
+    <!-- Form nuova -->
+    <form action="/admin/categories" method="POST" id="new-cat-form">
+      <div class="form-group">
+        <label>Nome *</label>
+        <input type="text" name="name" class="form-control" required placeholder="es. Antincrostanti">
+        <small style="color:var(--text-muted)">Lo slug viene generato automaticamente</small>
+      </div>
+      <div class="form-group">
+        <label>Ordine di visualizzazione</label>
+        <input type="number" name="sortOrder" class="form-control" value="0" min="0">
+      </div>
+      <button type="submit" class="btn btn-primary">Crea categoria</button>
+    </form>
+
+    <!-- Form modifica (nascosta) -->
+    <form action="" method="POST" id="edit-cat-form" style="display:none">
+      <div class="form-group">
+        <label>Nome *</label>
+        <input type="text" name="name" id="edit-name" class="form-control" required>
+      </div>
+      <div class="form-group">
+        <label>Ordine di visualizzazione</label>
+        <input type="number" name="sortOrder" id="edit-sortOrder" class="form-control" min="0">
+      </div>
+      <div style="display:flex;gap:0.5rem">
+        <button type="submit" class="btn btn-primary">Salva</button>
+        <button type="button" class="btn btn-outline" onclick="cancelEdit()">Annulla</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function editCategory(id, name, sortOrder) {
+  document.getElementById('form-title-new').style.display = 'none';
+  document.getElementById('form-title-edit').style.display = '';
+  document.getElementById('new-cat-form').style.display = 'none';
+  document.getElementById('edit-cat-form').style.display = '';
+  document.getElementById('edit-cat-form').action = '/admin/categories/' + id;
+  document.getElementById('edit-name').value = name;
+  document.getElementById('edit-sortOrder').value = sortOrder;
+}
+function cancelEdit() {
+  document.getElementById('form-title-new').style.display = '';
+  document.getElementById('form-title-edit').style.display = 'none';
+  document.getElementById('new-cat-form').style.display = '';
+  document.getElementById('edit-cat-form').style.display = 'none';
+}
+</script>
+
+<%- include('../partials/_admin-footer') %>

@@ -1,0 +1,24 @@
+    </div><!-- admin-content -->
+  </div><!-- admin-main -->
+</div><!-- admin-layout -->
+
+<div class="admin-overlay" id="adminOverlay"></div>
+
+<script src="/js/shop.js"></script>
+<script>
+  (function() {
+    const btn = document.getElementById('adminSidebarToggle');
+    const sidebar = document.querySelector('.admin-sidebar');
+    const overlay = document.getElementById('adminOverlay');
+    if (!btn || !sidebar || !overlay) return;
+    function open() { sidebar.classList.add('open'); overlay.classList.add('open'); }
+    function close() { sidebar.classList.remove('open'); overlay.classList.remove('open'); }
+    btn.addEventListener('click', function() {
+      sidebar.classList.contains('open') ? close() : open();
+    });
+    overlay.addEventListener('click', close);
+  })();
+</script>
+<%- typeof extraScripts !== 'undefined' ? extraScripts : '' %>
+</body>
+</html>

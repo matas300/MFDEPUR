@@ -1,0 +1,69 @@
+<%- include('../partials/_header', { title: 'Profilo' }) %>
+
+<div class="container container--narrow">
+  <h1 class="page-title">Profilo</h1>
+
+  <% if (typeof success !== 'undefined' && success) { %>
+    <div class="alert alert-success">Profilo aggiornato con successo.</div>
+  <% } %>
+
+  <div class="card">
+    <h3>Dati personali</h3>
+    <form action="/account/profile" method="POST">
+      <div class="form-row">
+        <div class="form-group">
+          <label for="firstName">Nome</label>
+          <input type="text" id="firstName" name="firstName" class="form-control"
+                 value="<%= currentUser.firstName %>" required>
+        </div>
+        <div class="form-group">
+          <label for="lastName">Cognome</label>
+          <input type="text" id="lastName" name="lastName" class="form-control"
+                 value="<%= currentUser.lastName %>" required>
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="email">Email</label>
+        <input type="email" class="form-control" value="<%= currentUser.email %>" disabled>
+        <small style="color:var(--text-muted)">L'email non può essere modificata. Contatta il supporto per cambiarla.</small>
+      </div>
+      <div class="form-group">
+        <label for="phone">Telefono</label>
+        <input type="tel" id="phone" name="phone" class="form-control"
+               value="<%= currentUser.phone || '' %>">
+      </div>
+      <button type="submit" class="btn btn-primary">Salva modifiche</button>
+    </form>
+  </div>
+
+  <div class="card" style="margin-top:1.5rem">
+    <h3>Dati azienda</h3>
+    <dl class="data-list">
+      <dt>Ragione sociale</dt>
+      <dd><%= currentUser.company.name %></dd>
+      <dt>Partita IVA</dt>
+      <dd><%= currentUser.company.vatNumber %></dd>
+      <% if (currentUser.company.fiscalCode) { %>
+        <dt>Codice fiscale</dt>
+        <dd><%= currentUser.company.fiscalCode %></dd>
+      <% } %>
+      <% if (currentUser.company.sdiCode) { %>
+        <dt>Codice SDI</dt>
+        <dd><%= currentUser.company.sdiCode %></dd>
+      <% } %>
+      <% if (currentUser.company.pec) { %>
+        <dt>PEC</dt>
+        <dd><%= currentUser.company.pec %></dd>
+      <% } %>
+    </dl>
+    <p style="color:var(--text-muted);font-size:0.85rem;margin-top:1rem">
+      Per modificare i dati aziendali contatta <a href="mailto:info@mfdepur.com">info@mfdepur.com</a>
+    </p>
+  </div>
+
+  <div style="margin-top:1.5rem">
+    <a href="/account" class="btn btn-outline">← Torna all'account</a>
+  </div>
+</div>
+
+<%- include('../partials/_footer') %>

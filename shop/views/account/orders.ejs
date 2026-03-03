@@ -1,0 +1,44 @@
+<%- include('../partials/_header', { title: 'I miei ordini' }) %>
+
+<div class="container">
+  <div class="page-header">
+    <h1 class="page-title">I miei ordini</h1>
+    <a href="/shop" class="btn btn-primary">Continua gli acquisti</a>
+  </div>
+
+  <% if (orders.length === 0) { %>
+    <div class="empty-state">
+      <p>Non hai ancora effettuato ordini.</p>
+      <a href="/shop" class="btn btn-primary">Vai al catalogo</a>
+    </div>
+  <% } else { %>
+    <div class="table-responsive">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Numero ordine</th>
+            <th>Data</th>
+            <th>Articoli</th>
+            <th>Totale</th>
+            <th>Stato</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <% orders.forEach(order => { %>
+            <tr>
+              <td><strong><%= order.orderNumber %></strong></td>
+              <td><%= new Date(order.createdAt).toLocaleDateString('it-IT') %></td>
+              <td><%= order.items.length %> articolo<%= order.items.length !== 1 ? 'i' : '' %></td>
+              <td><strong>&euro;<%= parseFloat(order.total).toFixed(2) %></strong></td>
+              <td><span class="order-status order-status--<%= order.status.toLowerCase() %>"><%= order.status %></span></td>
+              <td><a href="/account/orders/<%= order.id %>" class="btn btn-outline btn-sm">Dettaglio</a></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  <% } %>
+</div>
+
+<%- include('../partials/_footer') %>

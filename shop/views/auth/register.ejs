@@ -1,0 +1,106 @@
+<%- include('../partials/_header', { title: 'Registra la tua azienda' }) %>
+
+<div class="auth-container auth-container--wide">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <h1>Registra la tua azienda</h1>
+      <p>Crea un account per accedere al catalogo e acquistare prodotti MF Depur</p>
+    </div>
+
+    <% if (typeof errors !== 'undefined' && errors.length) { %>
+      <div class="alert alert-danger">
+        <% errors.forEach(e => { %><div><%= e.msg %></div><% }) %>
+      </div>
+    <% } %>
+
+    <form action="/auth/register" method="POST" class="auth-form">
+      <h3 class="form-section-title">Dati azienda</h3>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="companyName">Ragione sociale *</label>
+          <input type="text" id="companyName" name="companyName" class="form-control"
+                 value="<%= typeof body !== 'undefined' ? body.companyName || '' : '' %>" required>
+        </div>
+        <div class="form-group">
+          <label for="vatNumber">Partita IVA *</label>
+          <input type="text" id="vatNumber" name="vatNumber" class="form-control"
+                 placeholder="IT12345678901"
+                 value="<%= typeof body !== 'undefined' ? body.vatNumber || '' : '' %>" required>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="fiscalCode">Codice fiscale</label>
+          <input type="text" id="fiscalCode" name="fiscalCode" class="form-control"
+                 value="<%= typeof body !== 'undefined' ? body.fiscalCode || '' : '' %>">
+        </div>
+        <div class="form-group">
+          <label for="phone">Telefono *</label>
+          <input type="tel" id="phone" name="phone" class="form-control"
+                 value="<%= typeof body !== 'undefined' ? body.phone || '' : '' %>" required>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="sdiCode">Codice SDI</label>
+          <input type="text" id="sdiCode" name="sdiCode" class="form-control" maxlength="7"
+                 value="<%= typeof body !== 'undefined' ? body.sdiCode || '' : '' %>">
+        </div>
+        <div class="form-group">
+          <label for="pec">PEC</label>
+          <input type="email" id="pec" name="pec" class="form-control"
+                 value="<%= typeof body !== 'undefined' ? body.pec || '' : '' %>">
+        </div>
+      </div>
+
+      <h3 class="form-section-title">Dati accesso</h3>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="firstName">Nome *</label>
+          <input type="text" id="firstName" name="firstName" class="form-control"
+                 value="<%= typeof body !== 'undefined' ? body.firstName || '' : '' %>" required>
+        </div>
+        <div class="form-group">
+          <label for="lastName">Cognome *</label>
+          <input type="text" id="lastName" name="lastName" class="form-control"
+                 value="<%= typeof body !== 'undefined' ? body.lastName || '' : '' %>" required>
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="email">Email *</label>
+        <input type="email" id="email" name="email" class="form-control"
+               value="<%= typeof body !== 'undefined' ? body.email || '' : '' %>" required autocomplete="email">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="password">Password * <small>(min. 8 caratteri)</small></label>
+          <input type="password" id="password" name="password" class="form-control" minlength="8" required>
+        </div>
+        <div class="form-group">
+          <label for="confirmPassword">Conferma password *</label>
+          <input type="password" id="confirmPassword" name="confirmPassword" class="form-control" minlength="8" required>
+        </div>
+      </div>
+
+      <div class="alert alert-info" style="margin-top:1rem">
+        <strong>Nota:</strong> dopo la registrazione il tuo account dovrà essere approvato dal nostro team prima di poter effettuare ordini. Riceverai una email di conferma.
+      </div>
+
+      <div class="form-check" style="margin-top:1rem">
+        <input type="checkbox" id="gdprConsent" name="gdprConsent" required>
+        <label for="gdprConsent" style="font-size:.875rem">
+          Ho letto e accetto la <a href="/privacy" target="_blank">Privacy Policy</a>.
+          Acconsento al trattamento dei miei dati personali per la gestione dell'account e degli ordini, ai sensi del Regolamento UE 2016/679 (GDPR). <span class="req">*</span>
+        </label>
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-block" style="margin-top:1rem">Invia richiesta registrazione</button>
+    </form>
+
+    <div class="auth-links">
+      Hai già un account? <a href="/auth/login">Accedi</a>
+    </div>
+  </div>
+</div>
+
+<%- include('../partials/_footer') %>

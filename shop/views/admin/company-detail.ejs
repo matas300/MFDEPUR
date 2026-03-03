@@ -1,0 +1,101 @@
+<%- include('../partials/_admin-header', { title: company.name }) %>
+
+<div class="admin-back">
+  <a href="/admin/companies" class="btn btn-outline btn-sm">← Tutte le aziende</a>
+</div>
+
+<div class="order-detail-grid">
+  <!-- Dati azienda -->
+  <div>
+    <div class="card">
+      <div class="card-header">
+        <h2><%= company.name %></h2>
+        <span class="company-status company-status--<%= company.status.toLowerCase() %>"><%= company.status %></span>
+      </div>
+
+      <dl class="data-list">
+        <dt>P.IVA</dt><dd><%= company.vatNumber %></dd>
+        <% if (company.fiscalCode) { %><dt>Cod. Fiscale</dt><dd><%= company.fiscalCode %></dd><% } %>
+        <% if (company.phone) { %><dt>Telefono</dt><dd><%= company.phone %></dd><% } %>
+        <% if (company.sdiCode) { %><dt>Codice SDI</dt><dd><%= company.sdiCode %></dd><% } %>
+        <% if (company.pec) { %><dt>PEC</dt><dd><a href="mailto:<%= company.pec %>"><%= company.pec %></a></dd><% } %>
+        <% if (company.website) { %><dt>Sito web</dt><dd><a href="<%= company.website %>" target="_blank"><%= company.website %></a></dd><% } %>
+        <dt>Registrata il</dt><dd><%= new Date(company.createdAt).toLocaleDateString('it-IT') %></dd>
+      </dl>
+    </div>
+
+    <!-- Utenti -->
+    <div class="card" style="margin-top:1rem">
+      <h3>Utenti registrati</h3>
+      <% if (company.users && company.users.length > 0) { %>
+        <table class="data-table data-table--compact">
+          <thead><tr><th>Nome</th><th>Email</th><th>Ruolo</th><th>Verificato</th></tr></thead>
+          <tbody>
+            <% company.users.forEach(u => { %>
+              <tr>
+                <td><%= u.firstName %> <%= u.lastName %></td>
+                <td><a href="mailto:<%= u.email %>"><%= u.email %></a></td>
+                <td><%= u.role %></td>
+                <td><%= u.isEmailVerified ? '✅' : '❌' %></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      <% } else { %>
+        <p style="color:var(--text-muted)">Nessun utente.</p>
+      <% } %>
+    </div>
+
+    <!-- Ordini recenti -->
+    <div class="card" style="margin-top:1rem">
+      <h3>Ordini</h3>
+      <% if (company.orders && company.orders.length > 0) { %>
+        <table class="data-table data-table--compact">
+          <thead><tr><th>Ordine</th><th>Data</th><th>Totale</th><th>Stato</th><th></th></tr></thead>
+          <tbody>
+            <% company.orders.forEach(o => { %>
+              <tr>
+                <td><%= o.orderNumber %></td>
+                <td><%= new Date(o.createdAt).toLocaleDateString('it-IT') %></td>
+                <td>&euro;<%= parseFloat(o.total).toFixed(2) %></td>
+                <td><span class="order-status order-status--<%= o.status.toLowerCase() %>"><%= o.status %></span></td>
+                <td><a href="/admin/orders/<%= o.id %>" class="btn btn-outline btn-sm">Apri</a></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      <% } else { %>
+        <p style="color:var(--text-muted)">Nessun ordine.</p>
+      <% } %>
+    </div>
+  </div>
+
+  <!-- Pannello azioni -->
+  <div class="admin-sidebar-panel">
+    <h3>Stato account</h3>
+    <form action="/admin/companies/<%= company.id %>/status" method="POST">
+      <div class="form-group">
+        <select name="status" class="form-control">
+          <% ['PENDING','APPROVED','REJECTED','SUSPENDED'].forEach(s => { %>
+            <option value="<%= s %>" <%= company.status === s ? 'selected' : '' %>><%= s %></option>
+          <% }) %>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Note interne</label>
+        <textarea name="notes" class="form-control" rows="4" placeholder="Motivazione, note..."><%= company.notes || '' %></textarea>
+      </div>
+      <button type="submit" class="btn btn-primary btn-block">Aggiorna stato</button>
+    </form>
+
+    <div style="margin-top:1.5rem;padding-top:1.5rem;border-top:1px solid var(--border)">
+      <h4>Info rapide</h4>
+      <p style="color:var(--text-muted);font-size:0.9rem">
+        Ordini totali: <strong><%= company.orders ? company.orders.length : 0 %></strong><br>
+        Utenti: <strong><%= company.users ? company.users.length : 0 %></strong>
+      </p>
+    </div>
+  </div>
+</div>
+
+<%- include('../partials/_admin-footer') %>

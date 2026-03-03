@@ -1,0 +1,175 @@
+<%- include('../partials/_admin-header', { title: title }) %>
+
+<div class="admin-back">
+  <a href="/admin/products" class="btn btn-outline btn-sm">← Prodotti</a>
+</div>
+
+<% const isEdit = product !== null %>
+
+<div class="order-detail-grid">
+  <div>
+    <form action="<%= isEdit ? '/admin/products/' + product.id : '/admin/products' %>"
+          method="POST" enctype="multipart/form-data">
+
+      <!-- Dati principali -->
+      <div class="card">
+        <h3>Dati principali</h3>
+        <div class="form-group">
+          <label for="name">Nome prodotto *</label>
+          <input type="text" id="name" name="name" class="form-control"
+                 value="<%= isEdit ? product.name : '' %>" required>
+          <small style="color:var(--text-muted)">Lo slug URL viene generato automaticamente dal nome</small>
+        </div>
+        <div class="form-group">
+          <label for="shortDesc">Descrizione breve</label>
+          <input type="text" id="shortDesc" name="shortDesc" class="form-control"
+                 value="<%= isEdit ? (product.shortDesc || '') : '' %>"
+                 placeholder="Breve descrizione per il catalogo">
+        </div>
+        <div class="form-group">
+          <label for="description">Descrizione completa</label>
+          <textarea id="description" name="description" class="form-control" rows="4"><%= isEdit ? (product.description || '') : '' %></textarea>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="categoryId">Categoria</label>
+            <select id="categoryId" name="categoryId" class="form-control">
+              <option value="">— Nessuna —</option>
+              <% categories.forEach(c => { %>
+                <option value="<%= c.id %>" <%= (isEdit && product.categoryId === c.id) ? 'selected' : '' %>><%= c.name %></option>
+              <% }) %>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="sku">SKU *</label>
+            <input type="text" id="sku" name="sku" class="form-control"
+                   value="<%= isEdit ? product.sku : '' %>" required>
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom:12px">
+          <label style="display:flex;align-items:center;gap:10px;cursor:pointer">
+            <input type="checkbox" id="priceOnRequest" name="priceOnRequest" value="on"
+                   <%= (isEdit && product.priceOnRequest) ? 'checked' : '' %>
+                   onchange="togglePriceField(this.checked)">
+            <span><strong>Prezzo su richiesta</strong> — mostra "Contattaci per un preventivo" al posto del prezzo</span>
+          </label>
+        </div>
+        <div class="form-row" id="priceRow">
+          <div class="form-group">
+            <label for="price">Prezzo (&euro;, IVA esclusa)</label>
+            <input type="number" id="price" name="price" class="form-control"
+                   step="0.01" min="0"
+                   value="<%= isEdit && !product.priceOnRequest ? parseFloat(product.price).toFixed(2) : '' %>">
+          </div>
+          <div class="form-group">
+            <label for="unit">Unità di misura *</label>
+            <input type="text" id="unit" name="unit" class="form-control"
+                   placeholder="es. kg, L, pz, conf"
+                   value="<%= isEdit ? product.unit : 'kg' %>" required>
+          </div>
+        </div>
+        <script>
+          function togglePriceField(isChecked) {
+            document.getElementById('priceRow').style.opacity = isChecked ? '0.4' : '1';
+            document.getElementById('price').disabled = isChecked;
+          }
+          togglePriceField(<%= (isEdit && product.priceOnRequest) ? 'true' : 'false' %>);
+        </script>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="minOrderQty">Quantità minima ordine <span class="req">*</span></label>
+            <input type="number" id="minOrderQty" name="minOrderQty" class="form-control"
+                   min="1" value="<%= isEdit ? product.minOrderQty : 1 %>" required>
+            <small class="form-hint">Il cliente non potrà ordinarne meno di questo numero. Es: 5 = minimo 5 pezzi per ordine.</small>
+          </div>
+          <div class="form-group">
+            <label for="stock">Stock</label>
+            <input type="number" id="stock" name="stock" class="form-control"
+                   min="0" value="<%= isEdit ? product.stock : 0 %>">
+          </div>
+          <div class="form-group">
+            <label for="lowStockAlert">Soglia stock basso</label>
+            <input type="number" id="lowStockAlert" name="lowStockAlert" class="form-control"
+                   min="0" value="<%= isEdit ? product.lowStockAlert : 10 %>">
+          </div>
+        </div>
+      </div>
+
+      <!-- Caratteristiche -->
+      <div class="card" style="margin-top:1rem">
+        <h3>Caratteristiche tecniche</h3>
+        <small style="color:var(--text-muted)">Una caratteristica per riga (es. "pH: 6-8", "Concentrazione: 30%")</small>
+        <textarea id="features" name="features" class="form-control" rows="6" style="margin-top:0.5rem"
+                  placeholder="pH: 6-8&#10;Concentrazione: 30%&#10;Aspetto: liquido trasparente"><%= isEdit && product.features ? product.features.join('\n') : '' %></textarea>
+      </div>
+
+      <!-- Scheda tecnica -->
+      <div class="card" style="margin-top:1rem">
+        <h3>Scheda tecnica</h3>
+        <div class="form-group">
+          <label for="technicalSheet">URL PDF scheda tecnica</label>
+          <input type="url" id="technicalSheet" name="technicalSheet" class="form-control"
+                 placeholder="https://..."
+                 value="<%= isEdit ? (product.technicalSheet || '') : '' %>">
+        </div>
+      </div>
+
+      <div style="margin-top:1.5rem;display:flex;gap:1rem">
+        <button type="submit" class="btn btn-primary">
+          <%= isEdit ? 'Salva modifiche' : 'Crea prodotto' %>
+        </button>
+        <a href="/admin/products" class="btn btn-outline">Annulla</a>
+      </div>
+    </form>
+  </div>
+
+  <!-- Pannello laterale -->
+  <div class="admin-sidebar-panel">
+    <!-- Immagine -->
+    <div class="card">
+      <h3>Immagine principale</h3>
+      <% if (isEdit && product.imageUrl) { %>
+        <img src="<%= product.imageUrl %>" alt="" style="width:100%;border-radius:8px;margin-bottom:1rem;object-fit:cover;max-height:200px">
+      <% } %>
+      <form action="<%= isEdit ? '/admin/products/' + product.id : '/admin/products' %>"
+            method="POST" enctype="multipart/form-data" id="image-form">
+        <div class="form-group">
+          <label for="image">Carica immagine</label>
+          <input type="file" id="image" name="image" class="form-control" accept="image/*">
+          <small style="color:var(--text-muted)">JPG, PNG, WebP — max 5MB</small>
+        </div>
+      </form>
+    </div>
+
+    <!-- Opzioni -->
+    <div class="card" style="margin-top:1rem">
+      <h3>Opzioni</h3>
+      <div class="form-group">
+        <label>
+          <input type="checkbox" name="isActive" value="true" form="image-form"
+                 <%= !isEdit || product.isActive ? 'checked' : '' %>>
+          Prodotto attivo (visibile nel catalogo)
+        </label>
+      </div>
+      <div class="form-group">
+        <label>
+          <input type="checkbox" name="isFeatured" value="true" form="image-form"
+                 <%= isEdit && product.isFeatured ? 'checked' : '' %>>
+          In evidenza
+        </label>
+      </div>
+    </div>
+
+    <% if (isEdit) { %>
+      <div class="card" style="margin-top:1rem">
+        <h3 style="color:var(--danger)">Zona pericolosa</h3>
+        <form action="/admin/products/<%= product.id %>/delete" method="POST"
+              onsubmit="return confirm('Disattivare il prodotto \'<%= product.name.replace(/\'/g, '') %>\'?')">
+          <button type="submit" class="btn btn-danger-outline btn-block">Disattiva prodotto</button>
+        </form>
+      </div>
+    <% } %>
+  </div>
+</div>
+
+<%- include('../partials/_admin-footer') %>

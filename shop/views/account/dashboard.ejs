@@ -1,0 +1,63 @@
+<%- include('../partials/_header', { title: 'Il mio account' }) %>
+
+<div class="container">
+  <h1 class="page-title">Il mio account</h1>
+
+  <div class="account-grid">
+    <!-- Card azienda -->
+    <div class="account-card">
+      <div class="account-card-icon">🏢</div>
+      <h3><%= currentUser.company.name %></h3>
+      <p style="color:var(--text-muted)">P.IVA: <%= currentUser.company.vatNumber %></p>
+      <div style="margin-top:0.5rem">
+        <% if (currentUser.company.status === 'APPROVED') { %>
+          <span class="badge badge-success">Account attivo</span>
+        <% } else if (currentUser.company.status === 'PENDING') { %>
+          <span class="badge badge-warning">In attesa di approvazione</span>
+        <% } else { %>
+          <span class="badge badge-danger"><%= currentUser.company.status %></span>
+        <% } %>
+      </div>
+    </div>
+
+    <!-- Accesso rapido ordini -->
+    <div class="account-card account-card--link">
+      <a href="/account/orders" class="account-card-anchor">
+        <div class="account-card-icon">📦</div>
+        <h3>I miei ordini</h3>
+        <p style="color:var(--text-muted)">Visualizza e traccia i tuoi ordini</p>
+      </a>
+    </div>
+
+    <!-- Profilo -->
+    <div class="account-card account-card--link">
+      <a href="/account/profile" class="account-card-anchor">
+        <div class="account-card-icon">👤</div>
+        <h3>Profilo</h3>
+        <p style="color:var(--text-muted)"><%= currentUser.firstName %> <%= currentUser.lastName %></p>
+        <p style="color:var(--text-muted);font-size:0.9rem"><%= currentUser.email %></p>
+      </a>
+    </div>
+
+    <!-- Indirizzi -->
+    <div class="account-card account-card--link">
+      <a href="/account/addresses" class="account-card-anchor">
+        <div class="account-card-icon">📍</div>
+        <h3>Indirizzi di spedizione</h3>
+        <p style="color:var(--text-muted)">Gestisci gli indirizzi della tua azienda</p>
+      </a>
+    </div>
+  </div>
+
+  <% if (currentUser.company.status === 'APPROVED') { %>
+    <div style="margin-top:2rem;text-align:center">
+      <a href="/shop" class="btn btn-primary">Vai al catalogo</a>
+    </div>
+  <% } else { %>
+    <div class="alert alert-info" style="margin-top:2rem">
+      Il tuo account è in attesa di approvazione. Potrai effettuare ordini non appena il nostro team avrà verificato la tua azienda.
+    </div>
+  <% } %>
+</div>
+
+<%- include('../partials/_footer') %>

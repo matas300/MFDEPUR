@@ -1,0 +1,43 @@
+<%- include('../partials/_header', { title: 'Accedi' }) %>
+
+<div class="auth-container">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <img src="/img/logo.png" alt="MF Depur" onerror="this.style.display='none'">
+      <h1>MF Depur Shop</h1>
+      <p>Area riservata aziende</p>
+    </div>
+
+    <% if (typeof errors !== 'undefined' && errors.length) { %>
+      <div class="alert alert-danger">
+        <% errors.forEach(e => { %><div><%= e.msg %></div><% }) %>
+      </div>
+    <% } %>
+    <% if (typeof info !== 'undefined' && info) { %>
+      <div class="alert alert-info"><%= info %></div>
+    <% } %>
+
+    <form action="/auth/login" method="POST" class="auth-form">
+      <div class="form-group">
+        <label for="email">Email aziendale</label>
+        <input type="email" id="email" name="email" class="form-control"
+               value="<%= typeof body !== 'undefined' ? body.email || '' : '' %>"
+               required autocomplete="email">
+      </div>
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" class="form-control"
+               required autocomplete="current-password">
+      </div>
+      <button type="submit" class="btn btn-primary btn-block">Accedi</button>
+    </form>
+
+    <div class="auth-links">
+      <a href="/auth/forgot-password">Password dimenticata?</a>
+      <span>&mdash;</span>
+      <a href="/auth/register">Registra la tua azienda</a>
+    </div>
+  </div>
+</div>
+
+<%- include('../partials/_footer') %>

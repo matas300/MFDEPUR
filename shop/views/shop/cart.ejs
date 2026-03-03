@@ -1,0 +1,117 @@
+<%- include('../partials/_header', { title: 'Carrello' }) %>
+
+<div class="container">
+  <h1 class="page-title">Il tuo carrello</h1>
+
+  <%# ── Guest: carrello localStorage, renderizzato da shop.js ──────── %>
+  <% if (guest) { %>
+    <div id="guest-cart-container">
+      <div style="text-align:center;padding:3rem 0;color:var(--text-muted)">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom:.75rem;opacity:.4"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/></svg>
+        <p>Caricamento carrello...</p>
+      </div>
+    </div>
+
+  <%# ── Utente loggato ma non approvato ────────────────────────────── %>
+  <% } else if (!cart) { %>
+    <div class="alert alert-info" style="max-width:560px;margin:2rem auto">
+      <strong>Account in attesa di approvazione</strong><br>
+      Il tuo account è in fase di verifica. Potrai accedere al carrello e al checkout una volta che il nostro team avrà approvato la tua azienda.
+    </div>
+    <div style="text-align:center">
+      <a href="/shop" class="btn btn-outline">Continua a sfogliare il catalogo</a>
+    </div>
+
+  <%# ── Utente approvato: carrello DB ──────────────────────────────── %>
+  <% } else if (!cart || cart.items.length === 0) { %>
+    <div class="empty-state">
+      <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" style="opacity:0.3;margin-bottom:1rem"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+      <p>Il carrello è vuoto.</p>
+      <a href="/shop" class="btn btn-primary">Vai al catalogo</a>
+    </div>
+  <% } else { %>
+    <div class="cart-layout">
+      <!-- Tabella prodotti -->
+      <div class="cart-items">
+        <table class="cart-table">
+          <thead>
+            <tr>
+              <th>Prodotto</th>
+              <th>Prezzo unitario</th>
+              <th>Quantità</th>
+              <th>Totale</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <% cart.items.forEach(item => { %>
+              <tr class="cart-row" data-item-id="<%= item.id %>">
+                <td class="cart-product">
+                  <% if (item.product.imageUrl) { %>
+                    <img src="<%= item.product.imageUrl %>" alt="<%= item.product.name %>" class="cart-product-img">
+                  <% } %>
+                  <div>
+                    <a href="/shop/product/<%= item.product.slug %>"><strong><%= item.product.name %></strong></a>
+                    <br><small style="color:var(--text-muted)">SKU: <%= item.product.sku %></small>
+                  </div>
+                </td>
+                <td>&euro;<%= parseFloat(item.product.price).toFixed(2) %>/<%= item.product.unit %></td>
+                <td>
+                  <div class="qty-control qty-control--sm">
+                    <button type="button" class="qty-btn" data-action="minus" data-item="<%= item.id %>" data-min="<%= item.product.minOrderQty %>">−</button>
+                    <input type="number" class="qty-input qty-input--sm cart-qty"
+                           value="<%= item.quantity %>"
+                           min="<%= item.product.minOrderQty %>"
+                           data-item="<%= item.id %>"
+                           data-price="<%= parseFloat(item.product.price) %>">
+                    <button type="button" class="qty-btn" data-action="plus" data-item="<%= item.id %>">+</button>
+                  </div>
+                </td>
+                <td class="cart-row-total">&euro;<%= (parseFloat(item.product.price) * item.quantity).toFixed(2) %></td>
+                <td>
+                  <button class="btn-icon btn-remove-item" data-item="<%= item.id %>" title="Rimuovi">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                  </button>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+
+        <div class="cart-actions">
+          <a href="/shop" class="btn btn-outline">← Continua gli acquisti</a>
+          <form action="/shop/cart/clear" method="POST" onsubmit="return confirm('Svuotare il carrello?')">
+            <button type="submit" class="btn btn-danger-outline">Svuota carrello</button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Riepilogo -->
+      <div class="cart-summary">
+        <h3>Riepilogo ordine</h3>
+        <div class="cart-summary-row">
+          <span>Subtotale</span>
+          <span id="cart-subtotal">&euro;<%= totals.subtotal.toFixed(2) %></span>
+        </div>
+        <div class="cart-summary-row">
+          <span>IVA (22%)</span>
+          <span id="cart-tax">&euro;<%= totals.taxAmount.toFixed(2) %></span>
+        </div>
+        <div class="cart-summary-row">
+          <span>Spedizione</span>
+          <span style="color:var(--text-muted)">Calcolata al checkout</span>
+        </div>
+        <div class="cart-summary-total">
+          <span>Totale stimato</span>
+          <span id="cart-total">&euro;<%= totals.total.toFixed(2) %></span>
+        </div>
+        <a href="/shop/checkout" class="btn btn-primary btn-block">Procedi al checkout</a>
+        <p style="font-size:0.8rem;color:var(--text-muted);margin-top:0.75rem;text-align:center">
+          Il totale definitivo verrà calcolato al checkout inclusa la spedizione.
+        </p>
+      </div>
+    </div>
+  <% } %>
+</div>
+
+<%- include('../partials/_footer') %>

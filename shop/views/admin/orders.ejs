@@ -1,0 +1,51 @@
+<%- include('../partials/_admin-header', { title: 'Ordini' }) %>
+
+<div class="admin-section-header">
+  <form action="/admin/orders" method="GET" class="filter-bar">
+    <select name="stato" class="form-control form-control--sm" onchange="this.form.submit()">
+      <option value="">Tutti gli stati</option>
+      <% statuses.forEach(s => { %>
+        <option value="<%= s %>" <%= (filters.stato === s) ? 'selected' : '' %>><%= s %></option>
+      <% }) %>
+    </select>
+    <input type="text" name="azienda" class="form-control form-control--sm" placeholder="Cerca azienda..."
+           value="<%= filters.azienda || '' %>">
+    <button type="submit" class="btn btn-outline btn-sm">Filtra</button>
+    <a href="/admin/orders" class="btn btn-outline btn-sm">Reset</a>
+  </form>
+</div>
+
+<% if (!orders || orders.length === 0) { %>
+  <div class="empty-state"><p>Nessun ordine trovato.</p></div>
+<% } else { %>
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Ordine</th>
+        <th>Azienda</th>
+        <th>Data</th>
+        <th>Articoli</th>
+        <th>Totale</th>
+        <th>Pagamento</th>
+        <th>Stato</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      <% orders.forEach(order => { %>
+        <tr>
+          <td><strong><%= order.orderNumber %></strong></td>
+          <td><a href="/admin/companies/<%= order.companyId %>"><%= order.company.name %></a></td>
+          <td><%= new Date(order.createdAt).toLocaleDateString('it-IT') %></td>
+          <td><%= order._count ? order._count.items : '—' %></td>
+          <td><strong>&euro;<%= parseFloat(order.total).toFixed(2) %></strong></td>
+          <td><%= order.paymentMethod === 'STRIPE' ? 'Carta' : 'Bonifico' %></td>
+          <td><span class="order-status order-status--<%= order.status.toLowerCase() %>"><%= order.status %></span></td>
+          <td><a href="/admin/orders/<%= order.id %>" class="btn btn-outline btn-sm">Apri</a></td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+<% } %>
+
+<%- include('../partials/_admin-footer') %>

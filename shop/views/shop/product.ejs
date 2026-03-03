@@ -1,0 +1,152 @@
+<%- include('../partials/_header', { title: product.name }) %>
+
+<div class="container">
+  <!-- Breadcrumb -->
+  <nav class="breadcrumb">
+    <a href="/shop">Catalogo</a>
+    <% if (product.category) { %>
+      <span>/</span>
+      <a href="/shop?category=<%= product.category.slug %>"><%= product.category.name %></a>
+    <% } %>
+    <span>/</span>
+    <span><%= product.name %></span>
+  </nav>
+
+  <!-- Prodotto -->
+  <div class="product-detail">
+    <div class="product-detail-images">
+      <% if (product.imageUrl) { %>
+        <img src="<%= product.imageUrl %>" alt="<%= product.name %>" class="product-main-image">
+      <% } else { %>
+        <div class="product-card-img-placeholder product-main-image">
+          <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>
+        </div>
+      <% } %>
+      <% if (product.images && product.images.length > 0) { %>
+        <div class="product-thumbnails">
+          <% product.images.forEach(img => { %>
+            <img src="<%= img %>" alt="<%= product.name %>" class="product-thumb" onclick="document.querySelector('.product-main-image').src=this.src">
+          <% }) %>
+        </div>
+      <% } %>
+    </div>
+
+    <div class="product-detail-info">
+      <% if (product.category) { %>
+        <a href="/shop?category=<%= product.category.slug %>" class="product-card-category"><%= product.category.name %></a>
+      <% } %>
+      <h1 class="product-detail-title"><%= product.name %></h1>
+      <p class="product-detail-sku">SKU: <strong><%= product.sku %></strong></p>
+
+      <% if (product.description) { %>
+        <p class="product-detail-description"><%= product.description %></p>
+      <% } %>
+
+      <% if (product.features && product.features.length > 0) { %>
+        <ul class="product-features">
+          <% product.features.forEach(f => { %>
+            <li><%= f %></li>
+          <% }) %>
+        </ul>
+      <% } %>
+
+      <div class="product-detail-buy">
+        <% if (product.priceOnRequest) { %>
+          <div class="product-detail-price" style="font-size:1.3rem;color:var(--text-muted)">
+            Prezzo su richiesta
+          </div>
+          <div style="margin-top:1rem;display:flex;gap:.75rem;flex-wrap:wrap">
+            <a href="mailto:info@mfdepur.com?subject=Preventivo: <%= encodeURIComponent(product.name) %>&body=Buongiorno,%0A%0ASono interessato al prodotto: <%= encodeURIComponent(product.name) %> (SKU: <%= product.sku %>).%0A%0AVi chiedo un preventivo.%0A%0AGrazie"
+               class="btn btn-primary">
+              <i class="fa-solid fa-envelope"></i> Contattaci per un preventivo
+            </a>
+          </div>
+        <% } else { %>
+          <div class="product-detail-price">
+            &euro;<%= parseFloat(product.price).toFixed(2) %>
+            <small>/<%= product.unit %> &mdash; IVA esclusa</small>
+          </div>
+
+          <% if (product.stock > 0) { %>
+            <div class="product-detail-stock">
+              <span class="badge badge-success">Disponibile</span>
+              <small style="color:var(--text-muted)">Qtà minima: <%= product.minOrderQty %> <%= product.unit %></small>
+            </div>
+          <% } else { %>
+            <div class="product-detail-stock">
+              <span class="badge badge-danger">Non disponibile</span>
+            </div>
+          <% } %>
+
+          <% if (currentUser && currentUser.company && currentUser.company.status !== 'APPROVED') { %>
+            <div class="alert alert-info" style="margin-top:1rem">
+              Il tuo account è in attesa di approvazione. Potrai ordinare una volta approvato.
+            </div>
+          <% } else if (product.stock > 0) { %>
+            <div class="qty-add-form">
+              <div class="qty-control">
+                <button type="button" class="qty-btn" data-action="minus">−</button>
+                <input type="number" class="qty-input" id="qty" value="<%= product.minOrderQty %>" min="<%= product.minOrderQty %>" step="1">
+                <button type="button" class="qty-btn" data-action="plus">+</button>
+              </div>
+              <button class="btn btn-primary btn-add-cart-detail"
+                      data-id="<%= product.id %>"
+                      data-min="<%= product.minOrderQty %>"
+                      data-name="<%= product.name.replace(/"/g, '&quot;') %>"
+                      data-price="<%= parseFloat(product.price) %>"
+                      data-unit="<%= product.unit %>"
+                      data-img="<%= product.imageUrl || '' %>">
+                <i class="fa-solid fa-cart-shopping"></i> Aggiungi al carrello
+              </button>
+            </div>
+            <% if (!currentUser) { %>
+              <p style="font-size:.82rem;color:var(--text-muted);margin-top:.75rem">
+                <i class="fa-solid fa-circle-info"></i>
+                <a href="/auth/login">Accedi</a> o <a href="/auth/register">registra la tua azienda</a> per completare l'ordine.
+              </p>
+            <% } %>
+          <% } %>
+        <% } %>
+
+        <% if (product.technicalSheet) { %>
+          <a href="<%= product.technicalSheet %>" target="_blank" class="btn btn-secondary" style="margin-top:1rem">
+            <i class="fa-solid fa-file-pdf"></i> Scarica scheda tecnica
+          </a>
+        <% } %>
+      </div>
+    </div>
+  </div>
+
+  <!-- Prodotti correlati -->
+  <% if (related && related.length > 0) { %>
+    <section class="related-products">
+      <h2>Prodotti correlati</h2>
+      <div class="product-grid">
+        <% related.forEach(p => { %>
+          <div class="product-card">
+            <a href="/shop/product/<%= p.slug %>" class="product-card-img">
+              <% if (p.imageUrl) { %>
+                <img src="<%= p.imageUrl %>" alt="<%= p.name %>" loading="lazy">
+              <% } else { %>
+                <div class="product-card-img-placeholder"></div>
+              <% } %>
+            </a>
+            <div class="product-card-body">
+              <h3 class="product-card-title">
+                <a href="/shop/product/<%= p.slug %>"><%= p.name %></a>
+              </h3>
+              <div class="product-card-footer">
+                <% if (currentUser && currentUser.company && currentUser.company.status === 'APPROVED') { %>
+                  <div class="product-card-price">&euro;<%= parseFloat(p.price).toFixed(2) %><small>/<%= p.unit %></small></div>
+                <% } %>
+                <a href="/shop/product/<%= p.slug %>" class="btn btn-outline btn-sm">Dettaglio</a>
+              </div>
+            </div>
+          </div>
+        <% }) %>
+      </div>
+    </section>
+  <% } %>
+</div>
+
+<%- include('../partials/_footer') %>

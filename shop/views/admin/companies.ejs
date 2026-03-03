@@ -1,0 +1,51 @@
+<%- include('../partials/_admin-header', { title: 'Aziende clienti' }) %>
+
+<div class="admin-section-header">
+  <form action="/admin/companies" method="GET" class="filter-bar">
+    <select name="stato" class="form-control form-control--sm" onchange="this.form.submit()">
+      <option value="">Tutti gli stati</option>
+      <% statuses.forEach(s => { %>
+        <option value="<%= s %>" <%= (filters.stato === s) ? 'selected' : '' %>><%= s %></option>
+      <% }) %>
+    </select>
+    <input type="text" name="cerca" class="form-control form-control--sm" placeholder="Cerca azienda, P.IVA..."
+           value="<%= filters.cerca || '' %>">
+    <button type="submit" class="btn btn-outline btn-sm">Filtra</button>
+    <a href="/admin/companies" class="btn btn-outline btn-sm">Reset</a>
+  </form>
+</div>
+
+<% if (!companies || companies.length === 0) { %>
+  <div class="empty-state"><p>Nessuna azienda trovata.</p></div>
+<% } else { %>
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Ragione sociale</th>
+        <th>P.IVA</th>
+        <th>Utenti</th>
+        <th>Ordini</th>
+        <th>Data registr.</th>
+        <th>Stato</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      <% companies.forEach(company => { %>
+        <tr>
+          <td><strong><%= company.name %></strong></td>
+          <td><code><%= company.vatNumber %></code></td>
+          <td><%= company.users ? company.users.length : '—' %></td>
+          <td><%= company._count ? company._count.orders : '—' %></td>
+          <td><%= new Date(company.createdAt).toLocaleDateString('it-IT') %></td>
+          <td>
+            <span class="company-status company-status--<%= company.status.toLowerCase() %>"><%= company.status %></span>
+          </td>
+          <td><a href="/admin/companies/<%= company.id %>" class="btn btn-outline btn-sm">Dettaglio</a></td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+<% } %>
+
+<%- include('../partials/_admin-footer') %>

@@ -1,0 +1,228 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── ENUMS ────────────────────────────────────────────────────────────────────
+
+enum Role {
+  CUSTOMER
+  ADMIN
+}
+
+enum CompanyStatus {
+  PENDING    // Registrata, in attesa di approvazione admin
+  APPROVED   // Approvata, può acquistare
+  REJECTED   // Rifiutata
+  SUSPENDED  // Sospesa
+}
+
+enum OrderStatus {
+  PENDING        // Ordine ricevuto, pagamento non ancora confermato
+  PAYMENT_FAILED // Pagamento fallito
+  CONFIRMED      // Pagamento confermato
+  PROCESSING     // In preparazione
+  SHIPPED        // Spedito
+  DELIVERED      // Consegnato
+  CANCELLED      // Annullato
+  REFUNDED       // Rimborsato
+}
+
+enum PaymentMethod {
+  STRIPE
+  BANK_TRANSFER  // Bonifico bancario (con conferma manuale admin)
+}
+
+// ─── COMPANY ──────────────────────────────────────────────────────────────────
+
+model Company {
+  id             String        @id @default(cuid())
+  name           String
+  vatNumber      String        @unique  // P.IVA
+  fiscalCode     String?                // Codice fiscale (opzionale per le srl)
+  sdiCode        String?                // Codice SDI per fatturazione elettronica
+  pec            String?                // PEC
+  phone          String?
+  website        String?
+  status         CompanyStatus @default(PENDING)
+  notes          String?                // Note admin
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  users          User[]
+  orders         Order[]
+  addresses      Address[]
+}
+
+// ─── USER ─────────────────────────────────────────────────────────────────────
+
+model User {
+  id                   String    @id @default(cuid())
+  email                String    @unique
+  password             String
+  firstName            String
+  lastName             String
+  phone                String?
+  role                 Role      @default(CUSTOMER)
+  isEmailVerified      Boolean   @default(false)
+  emailVerifyToken     String?
+  resetPasswordToken   String?
+  resetPasswordExpires DateTime?
+  lastLoginAt          DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  companyId  String?
+  company    Company?  @relation(fields: [companyId], references: [id])
+
+  cart       Cart?
+  orders     Order[]
+  sessions   Session[]
+}
+
+// ─── SESSION (refresh token) ──────────────────────────────────────────────────
+
+model Session {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  refreshToken String   @unique
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+}
+
+// ─── CATEGORY ─────────────────────────────────────────────────────────────────
+
+model Category {
+  id          String    @id @default(cuid())
+  name        String
+  slug        String    @unique
+  description String?
+  imageUrl    String?
+  sortOrder   Int       @default(0)
+  createdAt   DateTime  @default(now())
+
+  products    Product[]
+}
+
+// ─── PRODUCT ──────────────────────────────────────────────────────────────────
+
+model Product {
+  id              String    @id @default(cuid())
+  name            String
+  slug            String    @unique
+  description     String?
+  shortDesc       String?
+  price           Decimal   @db.Decimal(10, 2)
+  comparePrice    Decimal?  @db.Decimal(10, 2)  // Prezzo barrato
+  sku             String?   @unique
+  stock           Int       @default(0)
+  lowStockAlert   Int       @default(10)         // Avvisa admin sotto questa soglia
+  unit            String    @default("kg")       // kg, L, pz, ...
+  minOrderQty     Int       @default(1)
+  isActive        Boolean   @default(true)
+  isFeatured      Boolean   @default(false)
+  priceOnRequest  Boolean   @default(false)  // Se true: mostra "Contattaci per un preventivo" invece del prezzo
+  imageUrl        String?
+  images          String[]                       // URL immagini extra
+  features        String[]                       // Lista bullet features
+  technicalSheet  String?                        // URL scheda tecnica PDF
+  categoryId      String?
+  category        Category? @relation(fields: [categoryId], references: [id])
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  cartItems       CartItem[]
+  orderItems      OrderItem[]
+}
+
+// ─── CART ─────────────────────────────────────────────────────────────────────
+
+model Cart {
+  id        String     @id @default(cuid())
+  userId    String     @unique
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  updatedAt DateTime   @updatedAt
+
+  items     CartItem[]
+}
+
+model CartItem {
+  id        String   @id @default(cuid())
+  cartId    String
+  cart      Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id])
+  quantity  Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([cartId, productId])
+}
+
+// ─── ADDRESS ──────────────────────────────────────────────────────────────────
+
+model Address {
+  id         String   @id @default(cuid())
+  companyId  String
+  company    Company  @relation(fields: [companyId], references: [id])
+  label      String   @default("Sede legale")  // es. "Magazzino", "Sede operativa"
+  street     String
+  city       String
+  province   String
+  postalCode String
+  country    String   @default("IT")
+  isDefault  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  orders     Order[]
+}
+
+// ─── ORDER ────────────────────────────────────────────────────────────────────
+
+model Order {
+  id              String        @id @default(cuid())
+  orderNumber     String        @unique  // Es. MFD-2024-0001
+  userId          String
+  user            User          @relation(fields: [userId], references: [id])
+  companyId       String
+  company         Company       @relation(fields: [companyId], references: [id])
+  addressId       String?
+  address         Address?      @relation(fields: [addressId], references: [id])
+  status          OrderStatus   @default(PENDING)
+  paymentMethod   PaymentMethod @default(STRIPE)
+  paymentIntentId String?       // Stripe payment intent ID
+  subtotal        Decimal       @db.Decimal(10, 2)
+  taxRate         Decimal       @default(0.22) @db.Decimal(4, 4)  // 22% IVA
+  taxAmount       Decimal       @db.Decimal(10, 2)
+  shippingCost    Decimal       @default(0) @db.Decimal(10, 2)
+  total           Decimal       @db.Decimal(10, 2)
+  notes           String?       // Note del cliente
+  adminNotes      String?       // Note interne admin
+  trackingNumber  String?
+  paidAt          DateTime?
+  shippedAt       DateTime?
+  deliveredAt     DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  items           OrderItem[]
+}
+
+model OrderItem {
+  id          String   @id @default(cuid())
+  orderId     String
+  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id])
+  productName String   // Snapshot del nome al momento dell'ordine
+  productSku  String?
+  unit        String
+  quantity    Int
+  unitPrice   Decimal  @db.Decimal(10, 2)  // Snapshot prezzo al momento dell'ordine
+  total       Decimal  @db.Decimal(10, 2)
+}

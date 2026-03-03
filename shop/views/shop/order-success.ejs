@@ -1,0 +1,101 @@
+<%- include('../partials/_header', { title: 'Ordine confermato' }) %>
+
+<div class="container">
+  <div class="order-success">
+    <div style="text-align:center;margin-bottom:2rem">
+      <div style="font-size:4rem;margin-bottom:1rem">✅</div>
+      <h1>Ordine confermato!</h1>
+      <p style="color:var(--text-muted)">
+        Grazie per il tuo ordine. Riceverai una conferma via email a breve.
+      </p>
+    </div>
+
+    <div class="order-detail-card">
+      <div class="order-detail-header">
+        <div>
+          <h2>Ordine <%= order.orderNumber %></h2>
+          <p style="color:var(--text-muted);margin:0">
+            <%= new Date(order.createdAt).toLocaleDateString('it-IT', { day: '2-digit', month: 'long', year: 'numeric' }) %>
+          </p>
+        </div>
+        <span class="order-status order-status--<%= order.status.toLowerCase() %>"><%= order.status %></span>
+      </div>
+
+      <% if (order.paymentMethod === 'BANK_TRANSFER') { %>
+        <div class="alert alert-info" style="margin:1.5rem 0">
+          <strong>Bonifico bancario</strong><br>
+          Hai scelto il pagamento tramite bonifico. Troverai le coordinate bancarie nella email di conferma.
+          L'ordine verrà processato dopo la ricezione del pagamento.
+        </div>
+      <% } %>
+
+      <table class="order-items-table">
+        <thead>
+          <tr>
+            <th>Prodotto</th>
+            <th>SKU</th>
+            <th>Qtà</th>
+            <th>Prezzo unit.</th>
+            <th>Totale</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% order.items.forEach(item => { %>
+            <tr>
+              <td><strong><%= item.productName %></strong></td>
+              <td><code><%= item.productSku %></code></td>
+              <td><%= item.quantity %> <%= item.unit %></td>
+              <td>&euro;<%= parseFloat(item.unitPrice).toFixed(2) %></td>
+              <td>&euro;<%= parseFloat(item.total).toFixed(2) %></td>
+            </tr>
+          <% }) %>
+        </tbody>
+        <tfoot>
+          <tr>
+            <td colspan="4" style="text-align:right">Subtotale</td>
+            <td>&euro;<%= parseFloat(order.subtotal).toFixed(2) %></td>
+          </tr>
+          <tr>
+            <td colspan="4" style="text-align:right">IVA 22%</td>
+            <td>&euro;<%= parseFloat(order.taxAmount).toFixed(2) %></td>
+          </tr>
+          <% if (parseFloat(order.shippingCost) > 0) { %>
+            <tr>
+              <td colspan="4" style="text-align:right">Spedizione</td>
+              <td>&euro;<%= parseFloat(order.shippingCost).toFixed(2) %></td>
+            </tr>
+          <% } %>
+          <tr class="order-total-row">
+            <td colspan="4" style="text-align:right"><strong>Totale</strong></td>
+            <td><strong>&euro;<%= parseFloat(order.total).toFixed(2) %></strong></td>
+          </tr>
+        </tfoot>
+      </table>
+
+      <% if (order.address) { %>
+        <div style="margin-top:1.5rem">
+          <h4>Indirizzo di spedizione</h4>
+          <address style="font-style:normal;color:var(--text-muted)">
+            <%= order.company.name %><br>
+            <%= order.address.street %><br>
+            <%= order.address.postalCode %> <%= order.address.city %> (<%= order.address.province %>)
+          </address>
+        </div>
+      <% } %>
+
+      <% if (order.notes) { %>
+        <div style="margin-top:1rem">
+          <h4>Note</h4>
+          <p style="color:var(--text-muted)"><%= order.notes %></p>
+        </div>
+      <% } %>
+    </div>
+
+    <div style="text-align:center;margin-top:2rem;display:flex;gap:1rem;justify-content:center;flex-wrap:wrap">
+      <a href="/account/orders" class="btn btn-outline">I miei ordini</a>
+      <a href="/shop" class="btn btn-primary">Torna al catalogo</a>
+    </div>
+  </div>
+</div>
+
+<%- include('../partials/_footer') %>

@@ -1,0 +1,158 @@
+<%- include('../partials/_header', {
+  title: 'Checkout',
+  extraHead: '<script src="https://js.stripe.com/v3/"></script>'
+}) %>
+
+<div class="container">
+  <h1 class="page-title">Checkout</h1>
+
+  <% if (typeof error !== 'undefined' && error) { %>
+    <div class="alert alert-danger"><%= error %></div>
+  <% } %>
+
+  <div class="checkout-layout">
+    <!-- Form -->
+    <div class="checkout-form">
+      <form id="checkout-form">
+
+        <!-- Indirizzo di spedizione -->
+        <div class="checkout-section">
+          <h3>Indirizzo di spedizione</h3>
+          <% if (addresses.length > 0) { %>
+            <div class="form-group">
+              <label>Scegli indirizzo salvato</label>
+              <select name="addressId" class="form-control" id="address-select">
+                <option value="">— Nuovo indirizzo —</option>
+                <% addresses.forEach(a => { %>
+                  <option value="<%= a.id %>" <%= a.isDefault ? 'selected' : '' %>>
+                    <%= a.label ? a.label + ' — ' : '' %><%= a.street %>, <%= a.city %> (<%= a.province %>)
+                  </option>
+                <% }) %>
+              </select>
+            </div>
+          <% } %>
+
+          <div id="new-address-fields">
+            <div class="form-row">
+              <div class="form-group">
+                <label>Etichetta (es. Sede, Magazzino)</label>
+                <input type="text" name="label" class="form-control" placeholder="Sede principale">
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Indirizzo *</label>
+              <input type="text" name="street" class="form-control" placeholder="Via Roma 1">
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Città *</label>
+                <input type="text" name="city" class="form-control">
+              </div>
+              <div class="form-group">
+                <label>Provincia *</label>
+                <input type="text" name="province" class="form-control" maxlength="2">
+              </div>
+              <div class="form-group">
+                <label>CAP *</label>
+                <input type="text" name="postalCode" class="form-control" maxlength="5">
+              </div>
+            </div>
+            <div class="form-group">
+              <label>
+                <input type="checkbox" name="saveAddress"> Salva questo indirizzo
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Note ordine -->
+        <div class="checkout-section">
+          <h3>Note</h3>
+          <div class="form-group">
+            <label>Note per la spedizione (opzionale)</label>
+            <textarea name="notes" class="form-control" rows="3" placeholder="Istruzioni speciali, orari di consegna..."></textarea>
+          </div>
+        </div>
+
+        <!-- Metodo di pagamento -->
+        <div class="checkout-section">
+          <h3>Metodo di pagamento</h3>
+          <div class="payment-methods">
+            <label class="payment-method-option">
+              <input type="radio" name="paymentMethod" value="STRIPE" checked id="pm-stripe">
+              <span>
+                <strong>Carta di credito / debito</strong>
+                <small>Pagamento sicuro tramite Stripe</small>
+              </span>
+            </label>
+            <label class="payment-method-option">
+              <input type="radio" name="paymentMethod" value="BANK_TRANSFER" id="pm-bank">
+              <span>
+                <strong>Bonifico bancario</strong>
+                <small>Riceverai le coordinate bancarie via email</small>
+              </span>
+            </label>
+          </div>
+
+          <div id="stripe-fields" style="margin-top:1.25rem">
+            <div class="form-group">
+              <label>Dati carta</label>
+              <div id="card-element" class="stripe-card-element"></div>
+              <div id="card-errors" role="alert" class="form-error" style="display:none"></div>
+            </div>
+          </div>
+        </div>
+
+        <div id="checkout-error" class="alert alert-danger" style="display:none"></div>
+
+        <button type="submit" class="btn btn-primary btn-block btn-lg" id="submit-btn">
+          Conferma e paga &euro;<%= totals.total.toFixed(2) %>
+        </button>
+        <p style="font-size:0.8rem;color:var(--text-muted);margin-top:0.5rem;text-align:center">
+          Pagamento sicuro. Cliccando "Conferma" accetti le condizioni di acquisto.
+        </p>
+      </form>
+    </div>
+
+    <!-- Riepilogo ordine -->
+    <div class="checkout-summary">
+      <h3>Il tuo ordine</h3>
+      <% cart.items.forEach(item => { %>
+        <div class="checkout-item">
+          <span><%= item.product.name %> &times; <%= item.quantity %> <%= item.product.unit %></span>
+          <span>&euro;<%= (Number(item.product.price) * item.quantity).toFixed(2) %></span>
+        </div>
+      <% }) %>
+      <div class="checkout-divider"></div>
+      <div class="checkout-item">
+        <span>Subtotale</span>
+        <span>&euro;<%= totals.subtotal.toFixed(2) %></span>
+      </div>
+      <div class="checkout-item">
+        <span>IVA 22%</span>
+        <span>&euro;<%= totals.taxAmount.toFixed(2) %></span>
+      </div>
+      <div class="checkout-item">
+        <span>Spedizione</span>
+        <span><%= totals.shippingCost === 0 ? 'Gratuita' : '€' + totals.shippingCost.toFixed(2) %></span>
+      </div>
+      <div class="checkout-divider"></div>
+      <div class="checkout-total">
+        <span>Totale (IVA incl.)</span>
+        <span>&euro;<%= totals.total.toFixed(2) %></span>
+      </div>
+
+      <div style="margin-top:1.5rem;font-size:0.8rem;color:var(--text-muted)">
+        <strong><%= currentUser.company.name %></strong><br>
+        P.IVA <%= currentUser.company.vatNumber %>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  window.STRIPE_KEY = '<%= stripePublicKey %>';
+</script>
+<script src="/js/checkout.js"></script>
+
+<%- include('../partials/_footer') %>

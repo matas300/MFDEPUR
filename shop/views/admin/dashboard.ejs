@@ -1,0 +1,78 @@
+<%- include('../partials/_admin-header', { title: 'Dashboard' }) %>
+
+<!-- Stats cards -->
+<div class="stats-grid">
+  <div class="stat-card">
+    <div class="stat-label">Ordini totali</div>
+    <div class="stat-value"><%= stats.totalOrders %></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Fatturato totale</div>
+    <div class="stat-value">&euro;<%= parseFloat(stats.revenue || 0).toFixed(2) %></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Ordini questo mese</div>
+    <div class="stat-value"><%= stats.ordersThisMonth %></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Fatturato mese</div>
+    <div class="stat-value">&euro;<%= parseFloat(stats.revenueMonth || 0).toFixed(2) %></div>
+  </div>
+  <div class="stat-card <%= stats.pendingCompanies > 0 ? 'stat-card--alert' : '' %>">
+    <div class="stat-label">Aziende in attesa</div>
+    <div class="stat-value"><%= stats.pendingCompanies %></div>
+    <% if (stats.pendingCompanies > 0) { %>
+      <a href="/admin/companies?stato=PENDING" class="stat-link">Rivedi &rarr;</a>
+    <% } %>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Prodotti attivi</div>
+    <div class="stat-value"><%= stats.totalProducts %></div>
+  </div>
+  <% if (lowStockProducts && lowStockProducts.length > 0) { %>
+    <div class="stat-card stat-card--alert">
+      <div class="stat-label">Stock basso</div>
+      <div class="stat-value"><%= lowStockProducts.length %></div>
+      <a href="/admin/products" class="stat-link">Vedi prodotti &rarr;</a>
+    </div>
+  <% } %>
+</div>
+
+<!-- Ultimi ordini -->
+<div class="admin-section">
+  <div class="admin-section-header">
+    <h2>Ultimi ordini</h2>
+    <a href="/admin/orders" class="btn btn-outline btn-sm">Vedi tutti</a>
+  </div>
+
+  <% if (!recentOrders || recentOrders.length === 0) { %>
+    <p style="color:var(--text-muted)">Nessun ordine ancora.</p>
+  <% } else { %>
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Ordine</th>
+          <th>Azienda</th>
+          <th>Data</th>
+          <th>Totale</th>
+          <th>Stato</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <% recentOrders.forEach(order => { %>
+          <tr>
+            <td><strong><%= order.orderNumber %></strong></td>
+            <td><%= order.company.name %></td>
+            <td><%= new Date(order.createdAt).toLocaleDateString('it-IT') %></td>
+            <td>&euro;<%= parseFloat(order.total).toFixed(2) %></td>
+            <td><span class="order-status order-status--<%= order.status.toLowerCase() %>"><%= order.status %></span></td>
+            <td><a href="/admin/orders/<%= order.id %>" class="btn btn-outline btn-sm">Dettaglio</a></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  <% } %>
+</div>
+
+<%- include('../partials/_admin-footer') %>

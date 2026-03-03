@@ -1,0 +1,31 @@
+</main><!-- /.shop-main -->
+
+<footer class="footer">
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <strong>MF Depur S.r.l.</strong><br>
+      Soluzioni per il trattamento delle acque industriali
+    </div>
+    <div class="footer-links">
+      <a href="/shop">Catalogo</a>
+      <% if (currentUser) { %>
+        <a href="/account">Il mio account</a>
+        <a href="/account/orders">I miei ordini</a>
+      <% } else { %>
+        <a href="/auth/login">Area riservata</a>
+        <a href="/auth/register">Registra azienda</a>
+      <% } %>
+      <a href="mailto:info@mfdepur.com">Contatti</a>
+    </div>
+    <div class="footer-legal">
+      &copy; <%= new Date().getFullYear() %> MF Depur S.r.l. &mdash; P.IVA IT12345678901<br>
+      Via dell'Industria 1, 00100 Roma (RM) &mdash; <a href="mailto:info@mfdepur.com">info@mfdepur.com</a><br>
+      <a href="/privacy">Privacy Policy</a>
+    </div>
+  </div>
+</footer>
+
+<script src="/js/shop.js"></script>
+<%- typeof extraScripts !== 'undefined' ? extraScripts : '' %>
+</body>
+</html>

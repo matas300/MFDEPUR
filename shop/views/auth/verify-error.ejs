@@ -1,0 +1,18 @@
+<%- include('../partials/_header', { title: 'Errore verifica email' }) %>
+
+<div class="auth-container">
+  <div class="auth-card" style="text-align:center">
+    <div style="font-size:4rem;margin-bottom:1rem">❌</div>
+    <h1 style="margin-bottom:0.5rem">Link non valido</h1>
+    <p style="color:var(--text-muted);margin-bottom:2rem">
+      Il link di verifica non è valido o è scaduto.<br>
+      Contattaci se hai bisogno di assistenza.
+    </p>
+    <a href="/auth/login" class="btn btn-primary">Torna al login</a>
+    <div style="margin-top:1rem">
+      <a href="mailto:info@mfdepur.com" style="color:var(--text-muted)">Contatta il supporto</a>
+    </div>
+  </div>
+</div>
+
+<%- include('../partials/_footer') %>

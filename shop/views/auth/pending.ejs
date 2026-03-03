@@ -1,0 +1,30 @@
+<%- include('../partials/_header', { title: 'Account in attesa' }) %>
+
+<div class="auth-container">
+  <div class="auth-card" style="text-align:center">
+    <div style="font-size:4rem;margin-bottom:1rem">⏳</div>
+    <h1 style="margin-bottom:0.5rem">Account in attesa di approvazione</h1>
+    <p style="color:var(--text-muted);margin-bottom:2rem">
+      Il tuo account è stato registrato ma è ancora in fase di revisione.<br>
+      Il nostro team approverà la tua azienda entro 1-2 giorni lavorativi.<br>
+      Riceverai una email non appena l'account sarà attivo.
+    </p>
+    <% if (typeof status !== 'undefined' && status === 'REJECTED') { %>
+      <div class="alert alert-danger">
+        La tua richiesta è stata rifiutata. Contattaci per maggiori informazioni.
+      </div>
+    <% } else if (typeof status !== 'undefined' && status === 'SUSPENDED') { %>
+      <div class="alert alert-warning">
+        Il tuo account è stato sospeso. Contattaci per maggiori informazioni.
+      </div>
+    <% } %>
+    <a href="mailto:info@mfdepur.com" class="btn btn-primary">Contatta il team</a>
+    <div style="margin-top:1rem">
+      <form action="/auth/logout" method="POST" style="display:inline">
+        <button type="submit" class="btn btn-outline">Esci</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<%- include('../partials/_footer') %>

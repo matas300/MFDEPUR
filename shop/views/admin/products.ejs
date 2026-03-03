@@ -1,0 +1,114 @@
+<%- include('../partials/_admin-header', { title: 'Gestione prodotti' }) %>
+
+<div class="admin-section-header">
+  <form action="/admin/products" method="GET" class="filter-bar">
+    <input type="text" name="cerca" class="form-control form-control--sm" placeholder="Cerca prodotto, SKU..."
+           value="<%= filters.cerca || '' %>">
+    <select name="categoria" class="form-control form-control--sm" onchange="this.form.submit()">
+      <option value="">Tutte le categorie</option>
+      <% categories.forEach(c => { %>
+        <option value="<%= c.slug %>" <%= (filters.categoria === c.slug) ? 'selected' : '' %>><%= c.name %></option>
+      <% }) %>
+    </select>
+    <button type="submit" class="btn btn-outline btn-sm">Filtra</button>
+    <a href="/admin/products" class="btn btn-outline btn-sm">Reset</a>
+  </form>
+  <a href="/admin/products/new" class="btn btn-primary btn-sm">+ Nuovo prodotto</a>
+</div>
+
+<% if (typeof req !== 'undefined' && req.query && req.query.success) { %>
+  <div class="alert alert-success">Prodotto creato con successo.</div>
+<% } %>
+
+<% if (!products || products.length === 0) { %>
+  <div class="empty-state">
+    <p>Nessun prodotto trovato.</p>
+    <a href="/admin/products/new" class="btn btn-primary">Crea il primo prodotto</a>
+  </div>
+<% } else { %>
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th style="width:60px"></th>
+        <th>Nome</th>
+        <th>SKU</th>
+        <th>Categoria</th>
+        <th>Prezzo</th>
+        <th>Stock</th>
+        <th>Attivo</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      <% products.forEach(p => { %>
+        <tr class="<%= !p.isActive ? 'row--disabled' : '' %>">
+          <td>
+            <% if (p.imageUrl) { %>
+              <img src="<%= p.imageUrl %>" alt="" style="width:48px;height:48px;object-fit:cover;border-radius:4px">
+            <% } else { %>
+              <div style="width:48px;height:48px;background:var(--bg-subtle);border-radius:4px;display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:1.2rem">📦</div>
+            <% } %>
+          </td>
+          <td>
+            <strong><%= p.name %></strong>
+            <% if (p.isFeatured) { %><span class="badge badge-featured" style="margin-left:0.4rem">★</span><% } %>
+            <% if (p.shortDesc) { %><br><small style="color:var(--text-muted)"><%= p.shortDesc %></small><% } %>
+          </td>
+          <td><code><%= p.sku %></code></td>
+          <td><%= p.category ? p.category.name : '—' %></td>
+          <td>&euro;<%= parseFloat(p.price).toFixed(2) %>/<%= p.unit %></td>
+          <td>
+            <% if (p.stock <= p.lowStockAlert) { %>
+              <span style="color:var(--danger)"><strong><%= p.stock %></strong> ⚠️</span>
+            <% } else { %>
+              <%= p.stock %>
+            <% } %>
+          </td>
+          <td>
+            <form action="/admin/products/<%= p.id %>/toggle" method="POST" style="display:inline" class="toggle-form">
+              <button type="submit" class="toggle-btn <%= p.isActive ? 'toggle-btn--on' : 'toggle-btn--off' %>">
+                <%= p.isActive ? '✓' : '✗' %>
+              </button>
+            </form>
+          </td>
+          <td class="table-actions">
+            <a href="/admin/products/<%= p.id %>/edit" class="btn btn-outline btn-sm">Modifica</a>
+            <form action="/admin/products/<%= p.id %>/delete" method="POST" style="display:inline"
+                  onsubmit="return confirm('Disattivare il prodotto?')">
+              <button type="submit" class="btn btn-danger-outline btn-sm">Disattiva</button>
+            </form>
+          </td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+
+  <!-- Paginazione -->
+  <% if (pagination.total > 1) { %>
+    <div class="pagination" style="margin-top:1.5rem">
+      <% for (let i = 1; i <= pagination.total; i++) { %>
+        <a href="/admin/products?cerca=<%= filters.cerca || '' %>&categoria=<%= filters.categoria || '' %>&pagina=<%= i %>"
+           class="page-btn <%= i === pagination.current ? 'active' : '' %>"><%= i %></a>
+      <% } %>
+    </div>
+  <% } %>
+<% } %>
+
+<script>
+// Toggle attivo/disattivo via AJAX
+document.querySelectorAll('.toggle-form').forEach(form => {
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = form.querySelector('.toggle-btn');
+    const res = await fetch(form.action, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+    if (res.ok) {
+      const { isActive } = await res.json();
+      btn.textContent = isActive ? '✓' : '✗';
+      btn.className = 'toggle-btn ' + (isActive ? 'toggle-btn--on' : 'toggle-btn--off');
+      btn.closest('tr').classList.toggle('row--disabled', !isActive);
+    }
+  });
+});
+</script>
+
+<%- include('../partials/_admin-footer') %>

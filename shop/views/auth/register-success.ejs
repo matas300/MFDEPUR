@@ -1,0 +1,23 @@
+<%- include('../partials/_header', { title: 'Registrazione inviata' }) %>
+
+<div class="auth-container">
+  <div class="auth-card" style="text-align:center">
+    <div style="font-size:4rem;margin-bottom:1rem">✅</div>
+    <h1 style="margin-bottom:0.5rem">Registrazione inviata!</h1>
+    <p style="color:var(--text-muted);margin-bottom:2rem">
+      La tua richiesta è stata ricevuta.<br>
+      Controlla la tua email per verificare l'indirizzo, poi il nostro team approverà il tuo account.
+    </p>
+    <div class="alert alert-info" style="text-align:left">
+      <strong>Prossimi passi:</strong>
+      <ol style="margin:0.5rem 0 0 1.2rem;padding:0">
+        <li>Verifica la tua email cliccando il link che ti abbiamo inviato</li>
+        <li>Attendi l'approvazione del nostro team (entro 1-2 giorni lavorativi)</li>
+        <li>Riceverai una email di conferma quando l'account sarà attivo</li>
+      </ol>
+    </div>
+    <a href="/auth/login" class="btn btn-primary">Vai al login</a>
+  </div>
+</div>
+
+<%- include('../partials/_footer') %>

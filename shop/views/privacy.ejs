@@ -1,0 +1,81 @@
+<%- include('partials/_header', { title: 'Privacy Policy' }) %>
+
+<div class="container container-sm" style="padding:2rem 0 4rem">
+  <h1 style="margin-bottom:.5rem">Privacy Policy</h1>
+  <p style="color:var(--text-muted);margin-bottom:2rem">Ultimo aggiornamento: marzo 2025</p>
+
+  <div class="card" style="padding:2rem;line-height:1.8">
+
+    <h2 style="font-size:1.1rem;margin:1.5rem 0 .5rem">1. Titolare del trattamento</h2>
+    <p>
+      <strong>MF Depur S.r.l.</strong><br>
+      Via dell'Industria 1, 00100 Roma (RM)<br>
+      P.IVA: IT12345678901<br>
+      Email: <a href="mailto:info@mfdepur.com">info@mfdepur.com</a>
+    </p>
+
+    <h2 style="font-size:1.1rem;margin:1.5rem 0 .5rem">2. Dati raccolti</h2>
+    <p>Raccogliamo i seguenti dati personali:</p>
+    <ul style="list-style:disc;padding-left:1.5rem;margin-top:.5rem">
+      <li>Dati anagrafici: nome, cognome, indirizzo email, telefono</li>
+      <li>Dati aziendali: ragione sociale, Partita IVA, codice fiscale, SDI, PEC</li>
+      <li>Dati di fatturazione e spedizione: indirizzi</li>
+      <li>Dati degli ordini effettuati</li>
+      <li>Dati tecnici: log di accesso, indirizzo IP (esclusivamente per sicurezza)</li>
+    </ul>
+
+    <h2 style="font-size:1.1rem;margin:1.5rem 0 .5rem">3. Finalità del trattamento</h2>
+    <p>I dati sono trattati per le seguenti finalità:</p>
+    <ul style="list-style:disc;padding-left:1.5rem;margin-top:.5rem">
+      <li><strong>Esecuzione del contratto</strong>: gestione degli ordini, fatturazione, spedizione</li>
+      <li><strong>Adempimenti di legge</strong>: obblighi fiscali, contabili e normativi</li>
+      <li><strong>Legittimo interesse</strong>: sicurezza del sito, prevenzione frodi</li>
+      <li><strong>Consenso</strong>: invio di comunicazioni commerciali (solo se espressamente richiesto)</li>
+    </ul>
+
+    <h2 style="font-size:1.1rem;margin:1.5rem 0 .5rem">4. Base giuridica</h2>
+    <p>Il trattamento si basa sull'esecuzione del contratto (art. 6 par. 1 lett. b GDPR), sul legittimo interesse (art. 6 par. 1 lett. f GDPR) e, ove applicabile, sul consenso dell'interessato (art. 6 par. 1 lett. a GDPR).</p>
+
+    <h2 style="font-size:1.1rem;margin:1.5rem 0 .5rem">5. Cookie</h2>
+    <p>
+      Il sito utilizza esclusivamente <strong>cookie tecnici strettamente necessari</strong> per il funzionamento dell'autenticazione (sessione JWT in cookie httpOnly). Non vengono utilizzati cookie di profilazione o di terze parti a scopo pubblicitario. I cookie tecnici non richiedono il consenso dell'utente ai sensi del Provvedimento del Garante del 10 giugno 2021.
+    </p>
+    <p style="margin-top:.5rem">Cookie utilizzati:</p>
+    <ul style="list-style:disc;padding-left:1.5rem;margin-top:.5rem">
+      <li><strong>accessToken</strong> — token di sessione (scade in 15 minuti), httpOnly</li>
+      <li><strong>refreshToken</strong> — token di rinnovo sessione (scade in 7 giorni), httpOnly</li>
+    </ul>
+
+    <h2 style="font-size:1.1rem;margin:1.5rem 0 .5rem">6. Comunicazione dei dati</h2>
+    <p>I dati non vengono ceduti a terzi per finalità proprie. Possono essere condivisi con:</p>
+    <ul style="list-style:disc;padding-left:1.5rem;margin-top:.5rem">
+      <li>Stripe Inc. — elaborazione pagamenti con carta di credito</li>
+      <li>Provider SMTP — invio email transazionali</li>
+      <li>Autorità competenti — se richiesto dalla legge</li>
+    </ul>
+
+    <h2 style="font-size:1.1rem;margin:1.5rem 0 .5rem">7. Conservazione dei dati</h2>
+    <p>I dati vengono conservati per il tempo strettamente necessario alle finalità indicate. I dati contabili e fiscali sono conservati per 10 anni ai sensi di legge. Le sessioni di autenticazione hanno durata massima di 7 giorni.</p>
+
+    <h2 style="font-size:1.1rem;margin:1.5rem 0 .5rem">8. Diritti dell'interessato</h2>
+    <p>L'interessato ha diritto di:</p>
+    <ul style="list-style:disc;padding-left:1.5rem;margin-top:.5rem">
+      <li>Accedere ai propri dati (art. 15 GDPR)</li>
+      <li>Rettificarli (art. 16 GDPR)</li>
+      <li>Cancellarli, ove applicabile (art. 17 GDPR)</li>
+      <li>Opporsi al trattamento (art. 21 GDPR)</li>
+      <li>Ricevere i dati in formato portabile (art. 20 GDPR)</li>
+      <li>Proporre reclamo al Garante per la Protezione dei Dati Personali</li>
+    </ul>
+    <p style="margin-top:.5rem">Per esercitare i propri diritti: <a href="mailto:info@mfdepur.com">info@mfdepur.com</a></p>
+
+    <h2 style="font-size:1.1rem;margin:1.5rem 0 .5rem">9. Sicurezza</h2>
+    <p>Adottiamo misure tecniche e organizzative adeguate per proteggere i dati: cifratura delle password (bcrypt), comunicazioni HTTPS, accesso limitato ai dati degli ordini, token di autenticazione revocabili.</p>
+
+    <div class="alert alert-info" style="margin-top:2rem">
+      Per qualsiasi richiesta relativa alla privacy: <a href="mailto:info@mfdepur.com">info@mfdepur.com</a>
+    </div>
+  </div>
+</div>
+
+<%- include('partials/_footer') %>

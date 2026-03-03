@@ -1,0 +1,137 @@
+<%- include('../partials/_admin-header', { title: title }) %>
+
+<div class="admin-back">
+  <a href="/admin/orders" class="btn btn-outline btn-sm">← Tutti gli ordini</a>
+</div>
+
+<div class="order-detail-grid">
+  <!-- Dati ordine -->
+  <div class="order-detail-card">
+    <div class="order-detail-header">
+      <div>
+        <h2><%= order.orderNumber %></h2>
+        <p style="color:var(--text-muted);margin:0">
+          <%= new Date(order.createdAt).toLocaleString('it-IT') %>
+        </p>
+      </div>
+      <span class="order-status order-status--<%= order.status.toLowerCase() %>"><%= order.status %></span>
+    </div>
+
+    <table class="order-items-table">
+      <thead>
+        <tr>
+          <th>Prodotto</th>
+          <th>SKU</th>
+          <th>Qtà</th>
+          <th>Prezzo unit.</th>
+          <th>Totale</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% order.items.forEach(item => { %>
+          <tr>
+            <td><strong><%= item.productName %></strong></td>
+            <td><code><%= item.productSku %></code></td>
+            <td><%= item.quantity %> <%= item.unit %></td>
+            <td>&euro;<%= parseFloat(item.unitPrice).toFixed(2) %></td>
+            <td>&euro;<%= parseFloat(item.total).toFixed(2) %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+      <tfoot>
+        <tr><td colspan="4" style="text-align:right">Subtotale</td><td>&euro;<%= parseFloat(order.subtotal).toFixed(2) %></td></tr>
+        <tr><td colspan="4" style="text-align:right">IVA 22%</td><td>&euro;<%= parseFloat(order.taxAmount).toFixed(2) %></td></tr>
+        <% if (parseFloat(order.shippingCost) > 0) { %>
+          <tr><td colspan="4" style="text-align:right">Spedizione</td><td>&euro;<%= parseFloat(order.shippingCost).toFixed(2) %></td></tr>
+        <% } %>
+        <tr class="order-total-row">
+          <td colspan="4" style="text-align:right"><strong>Totale</strong></td>
+          <td><strong>&euro;<%= parseFloat(order.total).toFixed(2) %></strong></td>
+        </tr>
+      </tfoot>
+    </table>
+
+    <div class="order-meta-grid" style="margin-top:1.5rem">
+      <div>
+        <h4>Azienda</h4>
+        <p><a href="/admin/companies/<%= order.company.id %>"><%= order.company.name %></a><br>
+        <span style="color:var(--text-muted)">P.IVA: <%= order.company.vatNumber %></span></p>
+      </div>
+      <div>
+        <h4>Cliente</h4>
+        <p><%= order.user.firstName %> <%= order.user.lastName %><br>
+        <a href="mailto:<%= order.user.email %>"><%= order.user.email %></a></p>
+      </div>
+      <div>
+        <h4>Pagamento</h4>
+        <p><%= order.paymentMethod === 'STRIPE' ? 'Carta di credito/debito' : 'Bonifico bancario' %>
+        <% if (order.paidAt) { %><br><span style="color:var(--text-muted)">Pagato: <%= new Date(order.paidAt).toLocaleDateString('it-IT') %></span><% } %>
+        <% if (order.paymentIntentId) { %><br><small style="color:var(--text-muted)">PI: <%= order.paymentIntentId %></small><% } %></p>
+      </div>
+      <% if (order.address) { %>
+        <div>
+          <h4>Spedizione a</h4>
+          <address style="font-style:normal">
+            <%= order.address.street %><br>
+            <%= order.address.postalCode %> <%= order.address.city %> (<%= order.address.province %>)
+          </address>
+        </div>
+      <% } %>
+      <% if (order.notes) { %>
+        <div>
+          <h4>Note</h4>
+          <p style="color:var(--text-muted)"><%= order.notes %></p>
+        </div>
+      <% } %>
+    </div>
+  </div>
+
+  <!-- Aggiorna stato -->
+  <div class="admin-sidebar-panel">
+    <h3>Aggiorna stato</h3>
+    <form action="/admin/orders/<%= order.id %>/status" method="POST">
+      <div class="form-group">
+        <select name="status" class="form-control">
+          <% ['PENDING','CONFIRMED','PROCESSING','SHIPPED','DELIVERED','CANCELLED','REFUNDED'].forEach(s => { %>
+            <option value="<%= s %>" <%= order.status === s ? 'selected' : '' %>><%= s %></option>
+          <% }) %>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Note interne (opzionale)</label>
+        <textarea name="notes" class="form-control" rows="3"></textarea>
+      </div>
+      <button type="submit" class="btn btn-primary btn-block">Aggiorna stato</button>
+    </form>
+
+    <div style="margin-top:2rem">
+      <h4>Timeline</h4>
+      <div class="order-timeline">
+        <div class="timeline-item <%= order.status !== 'PAYMENT_FAILED' ? 'done' : 'failed' %>">
+          <span>Ordine creato</span>
+          <small><%= new Date(order.createdAt).toLocaleDateString('it-IT') %></small>
+        </div>
+        <% if (order.paidAt) { %>
+          <div class="timeline-item done">
+            <span>Pagamento ricevuto</span>
+            <small><%= new Date(order.paidAt).toLocaleDateString('it-IT') %></small>
+          </div>
+        <% } %>
+        <% if (order.shippedAt) { %>
+          <div class="timeline-item done">
+            <span>Spedito</span>
+            <small><%= new Date(order.shippedAt).toLocaleDateString('it-IT') %></small>
+          </div>
+        <% } %>
+        <% if (order.deliveredAt) { %>
+          <div class="timeline-item done">
+            <span>Consegnato</span>
+            <small><%= new Date(order.deliveredAt).toLocaleDateString('it-IT') %></small>
+          </div>
+        <% } %>
+      </div>
+    </div>
+  </div>
+</div>
+
+<%- include('../partials/_admin-footer') %>

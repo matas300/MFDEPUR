@@ -1,0 +1,75 @@
+<%- include('../partials/_header', { title: 'Indirizzi di spedizione' }) %>
+
+<div class="container">
+  <h1 class="page-title">Indirizzi di spedizione</h1>
+
+  <% if (typeof success !== 'undefined' && success) { %>
+    <div class="alert alert-success">Indirizzo salvato con successo.</div>
+  <% } %>
+
+  <div class="addresses-grid">
+    <!-- Indirizzi esistenti -->
+    <% addresses.forEach(a => { %>
+      <div class="address-card <%= a.isDefault ? 'address-card--default' : '' %>">
+        <% if (a.isDefault) { %>
+          <span class="badge badge-success" style="margin-bottom:0.5rem">Predefinito</span>
+        <% } %>
+        <% if (a.label) { %><strong><%= a.label %></strong><br><% } %>
+        <%= a.street %><br>
+        <%= a.postalCode %> <%= a.city %> (<%= a.province %>)<br>
+        <%= a.country %>
+        <form action="/account/addresses/<%= a.id %>/delete" method="POST" style="margin-top:1rem"
+              onsubmit="return confirm('Eliminare questo indirizzo?')">
+          <button type="submit" class="btn btn-danger-outline btn-sm">Elimina</button>
+        </form>
+      </div>
+    <% }) %>
+
+    <!-- Form nuovo indirizzo -->
+    <div class="address-card address-card--new">
+      <h3>+ Nuovo indirizzo</h3>
+      <form action="/account/addresses" method="POST">
+        <div class="form-group">
+          <label>Etichetta</label>
+          <input type="text" name="label" class="form-control" placeholder="es. Sede, Magazzino">
+        </div>
+        <div class="form-group">
+          <label>Indirizzo *</label>
+          <input type="text" name="street" class="form-control" required>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Città *</label>
+            <input type="text" name="city" class="form-control" required>
+          </div>
+          <div class="form-group">
+            <label>Provincia *</label>
+            <input type="text" name="province" class="form-control" maxlength="2" required>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>CAP *</label>
+            <input type="text" name="postalCode" class="form-control" maxlength="5" required>
+          </div>
+          <div class="form-group">
+            <label>Paese</label>
+            <input type="text" name="country" class="form-control" value="IT" maxlength="2">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>
+            <input type="checkbox" name="isDefault"> Imposta come predefinito
+          </label>
+        </div>
+        <button type="submit" class="btn btn-primary">Salva indirizzo</button>
+      </form>
+    </div>
+  </div>
+
+  <div style="margin-top:1.5rem">
+    <a href="/account" class="btn btn-outline">← Torna all'account</a>
+  </div>
+</div>
+
+<%- include('../partials/_footer') %>

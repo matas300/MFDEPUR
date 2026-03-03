@@ -1,0 +1,217 @@
+const prisma = require('../config/database');
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const emailUtil = require('../utils/email');
+
+async function generateOrderNumber() {
+  const year = new Date().getFullYear();
+  const count = await prisma.order.count({
+    where: { createdAt: { gte: new Date(`${year}-01-01`) } },
+  });
+  return `MFD-${year}-${String(count + 1).padStart(4, '0')}`;
+}
+
+// GET /shop/checkout
+exports.getCheckout = async (req, res) => {
+  const cart = await prisma.cart.findUnique({
+    where: { userId: req.user.id },
+    include: { items: { include: { product: true } } },
+  });
+
+  if (!cart || cart.items.length === 0) return res.redirect('/shop/cart');
+
+  const addresses = await prisma.address.findMany({
+    where: { companyId: req.user.companyId },
+    orderBy: { isDefault: 'desc' },
+  });
+
+  const subtotal = cart.items.reduce((s, i) => s + Number(i.product.price) * i.quantity, 0);
+  const taxAmount = subtotal * 0.22;
+  const total = subtotal + taxAmount;
+
+  res.render('shop/checkout', {
+    cart,
+    addresses,
+    totals: { subtotal, taxAmount, total, shippingCost: 0 },
+    stripePublicKey: process.env.STRIPE_PUBLISHABLE_KEY,
+    title: 'Checkout',
+  });
+};
+
+// POST /shop/checkout  — crea Stripe PaymentIntent e ordine PENDING
+exports.postCheckout = async (req, res) => {
+  const { addressId, notes, paymentMethod = 'STRIPE' } = req.body;
+
+  const cart = await prisma.cart.findUnique({
+    where: { userId: req.user.id },
+    include: { items: { include: { product: true } } },
+  });
+
+  if (!cart || cart.items.length === 0) return res.redirect('/shop/cart');
+
+  // Verifica stock
+  for (const item of cart.items) {
+    if (item.product.stock < item.quantity) {
+      return res.render('shop/checkout', {
+        error: `Disponibilità insufficiente per "${item.product.name}" (max ${item.product.stock} ${item.product.unit})`,
+        cart,
+      });
+    }
+  }
+
+  const subtotal = cart.items.reduce((s, i) => s + Number(i.product.price) * i.quantity, 0);
+  const taxAmount = subtotal * 0.22;
+  const shippingCost = 0;
+  const total = subtotal + taxAmount + shippingCost;
+
+  const orderNumber = await generateOrderNumber();
+
+  // Crea ordine PENDING
+  const order = await prisma.order.create({
+    data: {
+      orderNumber,
+      userId: req.user.id,
+      companyId: req.user.companyId,
+      addressId: addressId || null,
+      status: 'PENDING',
+      paymentMethod: paymentMethod.toUpperCase(),
+      subtotal,
+      taxAmount,
+      shippingCost,
+      total,
+      notes: notes?.trim() || null,
+      items: {
+        create: cart.items.map(i => ({
+          productId: i.productId,
+          productName: i.product.name,
+          productSku: i.product.sku,
+          unit: i.product.unit,
+          quantity: i.quantity,
+          unitPrice: i.product.price,
+          total: Number(i.product.price) * i.quantity,
+        })),
+      },
+    },
+    include: { items: true, company: true },
+  });
+
+  if (paymentMethod === 'BANK_TRANSFER') {
+    // Per bonifico: conferma immediata lato ordine, attende conferma manuale admin
+    await prisma.order.update({ where: { id: order.id }, data: { status: 'CONFIRMED' } });
+    await _finalizeOrder(order, cart, req.user);
+    return res.redirect(`/shop/checkout/success?orderId=${order.id}`);
+  }
+
+  // Stripe: crea PaymentIntent
+  const paymentIntent = await stripe.paymentIntents.create({
+    amount: Math.round(total * 100), // centesimi
+    currency: 'eur',
+    metadata: { orderId: order.id, orderNumber },
+    receipt_email: req.user.email,
+  });
+
+  await prisma.order.update({
+    where: { id: order.id },
+    data: { paymentIntentId: paymentIntent.id },
+  });
+
+  res.json({
+    clientSecret: paymentIntent.client_secret,
+    orderId: order.id,
+  });
+};
+
+// GET /shop/checkout/success
+exports.checkoutSuccess = async (req, res) => {
+  const { orderId } = req.query;
+  const order = await prisma.order.findUnique({
+    where: { id: orderId },
+    include: { items: { include: { product: true } }, address: true, company: true },
+  });
+  if (!order || order.userId !== req.user.id) return res.redirect('/shop');
+  res.render('shop/order-success', { order, title: 'Ordine confermato' });
+};
+
+// GET /shop/checkout/cancel
+exports.checkoutCancel = (req, res) => res.redirect('/shop/cart');
+
+// POST /stripe/webhook  (registrata in app.js con rawBody)
+exports.stripeWebhook = async (req, res) => {
+  const sig = req.headers['stripe-signature'];
+  let event;
+
+  try {
+    event = stripe.webhooks.constructEvent(req.rawBody, sig, process.env.STRIPE_WEBHOOK_SECRET);
+  } catch (err) {
+    return res.status(400).send(`Webhook error: ${err.message}`);
+  }
+
+  if (event.type === 'payment_intent.succeeded') {
+    const pi = event.data.object;
+    const order = await prisma.order.findFirst({
+      where: { paymentIntentId: pi.id },
+      include: { items: true, company: true, user: true },
+    });
+    if (order && order.status === 'PENDING') {
+      await prisma.order.update({
+        where: { id: order.id },
+        data: { status: 'CONFIRMED', paidAt: new Date() },
+      });
+      const cart = await prisma.cart.findUnique({ where: { userId: order.userId }, include: { items: true } });
+      await _finalizeOrder(order, cart, order.user);
+    }
+  }
+
+  if (event.type === 'payment_intent.payment_failed') {
+    const pi = event.data.object;
+    await prisma.order.updateMany({
+      where: { paymentIntentId: pi.id },
+      data: { status: 'PAYMENT_FAILED' },
+    });
+  }
+
+  res.json({ received: true });
+};
+
+// Account ordini
+exports.getMyOrders = async (req, res) => {
+  const orders = await prisma.order.findMany({
+    where: { userId: req.user.id },
+    include: { items: true },
+    orderBy: { createdAt: 'desc' },
+  });
+  res.render('account/orders', { orders, title: 'I miei ordini' });
+};
+
+exports.getOrderDetail = async (req, res) => {
+  const order = await prisma.order.findUnique({
+    where: { id: req.params.id },
+    include: { items: { include: { product: true } }, address: true, company: true },
+  });
+  if (!order || order.userId !== req.user.id) {
+    return res.status(404).render('error', { message: 'Ordine non trovato', code: 404 });
+  }
+  res.render('account/order-detail', { order, title: `Ordine #${order.orderNumber}` });
+};
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+async function _finalizeOrder(order, cart, user) {
+  // Scala stock
+  for (const item of order.items) {
+    await prisma.product.update({
+      where: { id: item.productId },
+      data: { stock: { decrement: item.quantity } },
+    });
+  }
+
+  // Svuota carrello
+  if (cart) {
+    await prisma.cartItem.deleteMany({ where: { cartId: cart.id } });
+  }
+
+  // Email cliente
+  await emailUtil.sendOrderConfirmation(order, user).catch(() => {});
+
+  // Email admin
+  await emailUtil.sendNewOrderNotificationAdmin(order, order.company).catch(() => {});
+}

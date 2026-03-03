@@ -1,0 +1,19 @@
+<%- include('partials/_header', { title: 'Errore ' + code }) %>
+
+<div class="container" style="text-align:center;padding:4rem 1rem">
+  <div style="font-size:5rem;font-weight:700;color:var(--primary);opacity:0.15;line-height:1"><%= code %></div>
+  <h1 style="margin-top:-1rem;margin-bottom:0.75rem">
+    <% if (code === 404) { %>Pagina non trovata
+    <% } else if (code === 403) { %>Accesso negato
+    <% } else { %>Si è verificato un errore<% } %>
+  </h1>
+  <p style="color:var(--text-muted);max-width:480px;margin:0 auto 2rem">
+    <%= message %>
+  </p>
+  <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap">
+    <a href="/shop" class="btn btn-primary">Vai al catalogo</a>
+    <a href="javascript:history.back()" class="btn btn-outline">Torna indietro</a>
+  </div>
+</div>
+
+<%- include('partials/_footer') %>
