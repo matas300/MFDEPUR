@@ -6,7 +6,7 @@
     <a href="/shop">Catalogo</a>
     <% if (product.category) { %>
       <span>/</span>
-      <a href="/shop?category=<%= product.category.slug %>"><%= product.category.name %></a>
+      <a href="/shop?categoria=<%= product.category.slug %>"><%= product.category.name %></a>
     <% } %>
     <span>/</span>
     <span><%= product.name %></span>
@@ -33,7 +33,7 @@
 
     <div class="product-detail-info">
       <% if (product.category) { %>
-        <a href="/shop?category=<%= product.category.slug %>" class="product-card-category"><%= product.category.name %></a>
+        <a href="/shop?categoria=<%= product.category.slug %>" class="product-card-category"><%= product.category.name %></a>
       <% } %>
       <h1 class="product-detail-title"><%= product.name %></h1>
       <p class="product-detail-sku">SKU: <strong><%= product.sku %></strong></p>

@@ -6,7 +6,7 @@ const fs = require('fs');
 
 // GET /shop  — catalogo con filtri
 exports.getCatalog = async (req, res) => {
-  const { categoria, cerca, pagina = 1 } = req.query;
+  const { categoria, cerca, pmin, pmax, ordina, pagina = 1 } = req.query;
   const PER_PAGE = 12;
   const skip = (parseInt(pagina) - 1) * PER_PAGE;
 
@@ -25,11 +25,28 @@ exports.getCatalog = async (req, res) => {
     ];
   }
 
+  const priceFilter = {};
+  const pminN = parseFloat(pmin);
+  const pmaxN = parseFloat(pmax);
+  if (Number.isFinite(pminN) && pminN >= 0) priceFilter.gte = pminN;
+  if (Number.isFinite(pmaxN) && pmaxN >= 0) priceFilter.lte = pmaxN;
+  if (Object.keys(priceFilter).length) {
+    where.AND = [{ price: priceFilter }, { priceOnRequest: false }];
+  }
+
+  const sortOptions = {
+    'price-asc':  [{ priceOnRequest: 'asc' }, { price: 'asc' }],
+    'price-desc': [{ priceOnRequest: 'asc' }, { price: 'desc' }],
+    'name-asc':   [{ name: 'asc' }],
+    'newest':     [{ isFeatured: 'desc' }, { createdAt: 'desc' }],
+  };
+  const orderBy = sortOptions[ordina] || sortOptions.newest;
+
   const [products, total, categories] = await Promise.all([
     prisma.product.findMany({
       where,
       include: { category: true },
-      orderBy: [{ isFeatured: 'desc' }, { createdAt: 'desc' }],
+      orderBy,
       skip,
       take: PER_PAGE,
     }),
@@ -45,7 +62,7 @@ exports.getCatalog = async (req, res) => {
       total: Math.ceil(total / PER_PAGE),
       totalItems: total,
     },
-    filters: { categoria, cerca },
+    filters: { categoria, cerca, pmin: pmin || '', pmax: pmax || '', ordina: ordina || 'newest' },
     title: 'Catalogo prodotti',
   });
 };

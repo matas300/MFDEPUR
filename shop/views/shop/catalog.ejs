@@ -10,6 +10,19 @@
 
 <div class="container" style="padding-bottom:3rem">
 
+  <nav class="breadcrumb" aria-label="breadcrumb">
+    <a href="/">Home</a>
+    <span>/</span>
+    <% if (filters.categoria) { %>
+      <a href="/shop">Catalogo</a>
+      <span>/</span>
+      <% const activeCat = categories.find(c => c.slug === filters.categoria); %>
+      <span><%= activeCat ? activeCat.name : filters.categoria %></span>
+    <% } else { %>
+      <span>Catalogo</span>
+    <% } %>
+  </nav>
+
   <% if (!currentUser) { %>
     <!-- Banner per utenti non registrati -->
     <div class="shop-guest-banner">
@@ -43,6 +56,22 @@
         <% }) %>
       </ul>
 
+      <form action="/shop" method="GET" class="price-filter" style="padding:1rem;border-top:1px solid var(--border)">
+        <h4 style="font-size:.85rem;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted);margin-bottom:.75rem">Filtra per prezzo</h4>
+        <% if (filters.categoria) { %><input type="hidden" name="categoria" value="<%= filters.categoria %>"><% } %>
+        <% if (filters.cerca) { %><input type="hidden" name="cerca" value="<%= filters.cerca %>"><% } %>
+        <% if (filters.ordina && filters.ordina !== 'newest') { %><input type="hidden" name="ordina" value="<%= filters.ordina %>"><% } %>
+        <div style="display:flex;gap:.5rem;margin-bottom:.5rem">
+          <input type="number" name="pmin" min="0" step="0.01" placeholder="Min €" value="<%= filters.pmin %>" class="form-control" style="padding:6px 10px;font-size:.85rem" aria-label="Prezzo minimo">
+          <input type="number" name="pmax" min="0" step="0.01" placeholder="Max €" value="<%= filters.pmax %>" class="form-control" style="padding:6px 10px;font-size:.85rem" aria-label="Prezzo massimo">
+        </div>
+        <button type="submit" class="btn btn-outline btn-sm btn-block">Applica</button>
+        <% if (filters.pmin || filters.pmax) { %>
+          <% const clearQs = new URLSearchParams({ ...(filters.categoria && { categoria: filters.categoria }), ...(filters.cerca && { cerca: filters.cerca }), ...(filters.ordina && filters.ordina !== 'newest' && { ordina: filters.ordina }) }).toString(); %>
+          <a href="/shop<%= clearQs ? '?' + clearQs : '' %>" style="display:block;text-align:center;margin-top:.5rem;font-size:.8rem;color:var(--text-muted)">× Rimuovi filtro</a>
+        <% } %>
+      </form>
+
       <% if (currentUser && currentUser.company && currentUser.company.status === 'APPROVED') { %>
         <div style="padding:1rem;border-top:1px solid var(--border)">
           <a href="/shop/cart" class="btn btn-primary btn-block" style="border-radius:var(--r-full)">
@@ -56,18 +85,25 @@
 
     <!-- Prodotti -->
     <div class="catalog-main">
-      <!-- Barra di ricerca -->
+      <!-- Barra di ricerca + ordinamento -->
       <form action="/shop" method="GET" class="search-bar">
-        <% if (filters.categoria) { %>
-          <input type="hidden" name="categoria" value="<%= filters.categoria %>">
-        <% } %>
+        <% if (filters.categoria) { %><input type="hidden" name="categoria" value="<%= filters.categoria %>"><% } %>
+        <% if (filters.pmin) { %><input type="hidden" name="pmin" value="<%= filters.pmin %>"><% } %>
+        <% if (filters.pmax) { %><input type="hidden" name="pmax" value="<%= filters.pmax %>"><% } %>
         <input type="text" name="cerca" class="form-control" placeholder="Cerca prodotto, codice SKU..."
                value="<%= filters.cerca || '' %>">
+        <select name="ordina" class="form-control" style="max-width:200px" aria-label="Ordina per" onchange="this.form.submit()">
+          <option value="newest"     <%= filters.ordina === 'newest' ? 'selected' : '' %>>Più recenti</option>
+          <option value="price-asc"  <%= filters.ordina === 'price-asc' ? 'selected' : '' %>>Prezzo: crescente</option>
+          <option value="price-desc" <%= filters.ordina === 'price-desc' ? 'selected' : '' %>>Prezzo: decrescente</option>
+          <option value="name-asc"   <%= filters.ordina === 'name-asc' ? 'selected' : '' %>>Nome: A-Z</option>
+        </select>
         <button type="submit" class="btn btn-primary">
           <i class="fa-solid fa-magnifying-glass"></i> Cerca
         </button>
         <% if (filters.cerca) { %>
-          <a href="/shop<%= filters.categoria ? '?categoria=' + filters.categoria : '' %>" class="btn btn-secondary">× Annulla</a>
+          <% const cancelParams = new URLSearchParams({ ...(filters.categoria && { categoria: filters.categoria }), ...(filters.pmin && { pmin: filters.pmin }), ...(filters.pmax && { pmax: filters.pmax }), ...(filters.ordina && filters.ordina !== 'newest' && { ordina: filters.ordina }) }).toString(); %>
+          <a href="/shop<%= cancelParams ? '?' + cancelParams : '' %>" class="btn btn-secondary">× Annulla</a>
         <% } %>
       </form>
 
@@ -153,17 +189,28 @@
         </div>
 
         <!-- Paginazione -->
-        <% if (pagination.total > 1) { %>
+        <% if (pagination.total > 1) {
+             const pageUrl = (p) => {
+               const params = new URLSearchParams({
+                 ...(filters.categoria && { categoria: filters.categoria }),
+                 ...(filters.cerca && { cerca: filters.cerca }),
+                 ...(filters.pmin && { pmin: filters.pmin }),
+                 ...(filters.pmax && { pmax: filters.pmax }),
+                 ...(filters.ordina && filters.ordina !== 'newest' && { ordina: filters.ordina }),
+                 pagina: p,
+               });
+               return '/shop?' + params.toString();
+             };
+        %>
           <div class="pagination">
             <% if (pagination.current > 1) { %>
-              <a href="/shop?categoria=<%= filters.categoria || '' %>&cerca=<%= filters.cerca || '' %>&pagina=<%= pagination.current - 1 %>" class="page-btn">&laquo;</a>
+              <a href="<%= pageUrl(pagination.current - 1) %>" class="page-btn">&laquo;</a>
             <% } %>
             <% for (let i = 1; i <= pagination.total; i++) { %>
-              <a href="/shop?categoria=<%= filters.categoria || '' %>&cerca=<%= filters.cerca || '' %>&pagina=<%= i %>"
-                 class="page-btn <%= i === pagination.current ? 'active' : '' %>"><%= i %></a>
+              <a href="<%= pageUrl(i) %>" class="page-btn <%= i === pagination.current ? 'active' : '' %>"><%= i %></a>
             <% } %>
             <% if (pagination.current < pagination.total) { %>
-              <a href="/shop?categoria=<%= filters.categoria || '' %>&cerca=<%= filters.cerca || '' %>&pagina=<%= pagination.current + 1 %>" class="page-btn">&raquo;</a>
+              <a href="<%= pageUrl(pagination.current + 1) %>" class="page-btn">&raquo;</a>
             <% } %>
           </div>
         <% } %>
