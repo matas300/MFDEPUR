@@ -76,14 +76,45 @@ exports.getDashboard = async (req, res) => {
 
 // ── Ordini ────────────────────────────────────────────────────────────────────
 
-exports.getOrders = async (req, res) => {
-  const { stato, azienda, pagina = 1 } = req.query;
-  const PER_PAGE = 20;
-  const skip = (parseInt(pagina) - 1) * PER_PAGE;
-  const where = {};
+const ORDER_STATUSES = ['PENDING', 'CONFIRMED', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED', 'REFUNDED', 'PAYMENT_FAILED'];
 
-  if (stato) where.status = stato;
-  if (azienda) where.company = { name: { contains: azienda } };
+// Costruisce il filtro Prisma condiviso tra lista e export
+function buildOrdersWhere(query) {
+  const where = {};
+  const { stato, azienda, dal, al } = query;
+
+  // Multi-stato: stato può essere string o array (Express parsa ?stato=A&stato=B come array)
+  if (stato) {
+    const list = (Array.isArray(stato) ? stato : String(stato).split(','))
+      .map(s => String(s).trim().toUpperCase())
+      .filter(s => ORDER_STATUSES.includes(s));
+    if (list.length === 1) where.status = list[0];
+    else if (list.length > 1) where.status = { in: list };
+  }
+
+  if (azienda) where.company = { name: { contains: String(azienda) } };
+
+  // Range date YYYY-MM-DD
+  const dateRe = /^\d{4}-\d{2}-\d{2}$/;
+  const range = {};
+  if (dal && dateRe.test(dal)) {
+    const d = new Date(`${dal}T00:00:00`);
+    if (!isNaN(d)) range.gte = d;
+  }
+  if (al && dateRe.test(al)) {
+    const d = new Date(`${al}T23:59:59.999`);
+    if (!isNaN(d)) range.lte = d;
+  }
+  if (range.gte || range.lte) where.createdAt = range;
+
+  return where;
+}
+
+exports.getOrders = async (req, res) => {
+  const { pagina = 1 } = req.query;
+  const PER_PAGE = 20;
+  const skip = (Math.max(1, parseInt(pagina) || 1) - 1) * PER_PAGE;
+  const where = buildOrdersWhere(req.query);
 
   const [orders, total] = await Promise.all([
     prisma.order.findMany({
@@ -100,13 +131,81 @@ exports.getOrders = async (req, res) => {
     prisma.order.count({ where }),
   ]);
 
+  // Normalizza filtri.stato in array per checkbox multi-selezione
+  const rawStato = req.query.stato;
+  const statoArr = rawStato
+    ? (Array.isArray(rawStato) ? rawStato : String(rawStato).split(','))
+        .map(s => String(s).trim().toUpperCase()).filter(Boolean)
+    : [];
+
   res.render('admin/orders', {
     orders,
-    pagination: { current: parseInt(pagina), total: Math.ceil(total / PER_PAGE) },
-    filters: { stato, azienda },
-    statuses: ['PENDING', 'CONFIRMED', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED', 'REFUNDED'],
+    pagination: { current: parseInt(pagina) || 1, total: Math.ceil(total / PER_PAGE) },
+    filters: {
+      stato: statoArr,
+      azienda: req.query.azienda || '',
+      dal: req.query.dal || '',
+      al: req.query.al || '',
+    },
+    statuses: ORDER_STATUSES,
+    totalCount: total,
     title: 'Ordini',
   });
+};
+
+// GET /admin/orders/export.csv — stessi filtri della lista
+exports.exportOrdersCSV = async (req, res) => {
+  const where = buildOrdersWhere(req.query);
+  const orders = await prisma.order.findMany({
+    where,
+    include: {
+      company: { select: { name: true, vatNumber: true } },
+      user: { select: { firstName: true, lastName: true, email: true } },
+      _count: { select: { items: true } },
+    },
+    orderBy: { createdAt: 'desc' },
+    take: 5000, // cap di sicurezza
+  });
+
+  // CSV escape: RFC 4180 — racchiude in "..." e raddoppia le virgolette interne
+  const esc = v => {
+    if (v === null || v === undefined) return '';
+    const s = String(v);
+    return /[",\r\n;]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+
+  const header = [
+    'Numero ordine', 'Data', 'Stato', 'Azienda', 'P.IVA',
+    'Cliente', 'Email', 'Articoli', 'Subtotale', 'IVA', 'Spedizione', 'Totale',
+    'Metodo pagamento', 'Pagato il', 'Spedito il', 'Consegnato il',
+  ];
+
+  const rows = orders.map(o => [
+    o.orderNumber,
+    new Date(o.createdAt).toISOString(),
+    o.status,
+    o.company?.name || '',
+    o.company?.vatNumber || '',
+    `${o.user?.firstName || ''} ${o.user?.lastName || ''}`.trim(),
+    o.user?.email || '',
+    o._count?.items ?? '',
+    parseFloat(o.subtotal).toFixed(2),
+    parseFloat(o.taxAmount).toFixed(2),
+    parseFloat(o.shippingCost).toFixed(2),
+    parseFloat(o.total).toFixed(2),
+    o.paymentMethod === 'STRIPE' ? 'Carta' : 'Bonifico',
+    o.paidAt ? new Date(o.paidAt).toISOString() : '',
+    o.shippedAt ? new Date(o.shippedAt).toISOString() : '',
+    o.deliveredAt ? new Date(o.deliveredAt).toISOString() : '',
+  ]);
+
+  // BOM UTF-8 per Excel + separatore virgola
+  const csv = '﻿' + [header, ...rows].map(r => r.map(esc).join(',')).join('\r\n');
+  const stamp = new Date().toISOString().slice(0, 10);
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="ordini-${stamp}.csv"`);
+  res.setHeader('Cache-Control', 'no-store');
+  res.send(csv);
 };
 
 exports.getOrderDetail = async (req, res) => {

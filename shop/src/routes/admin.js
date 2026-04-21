@@ -10,6 +10,7 @@ router.get('/', adminCtrl.getDashboard);
 
 // Ordini
 router.get('/orders', adminCtrl.getOrders);
+router.get('/orders/export.csv', adminCtrl.exportOrdersCSV);
 router.get('/orders/:id', adminCtrl.getOrderDetail);
 router.post('/orders/:id/status', adminCtrl.updateOrderStatus);
 

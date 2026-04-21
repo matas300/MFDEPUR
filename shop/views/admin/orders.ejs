@@ -1,28 +1,77 @@
 <%- include('../partials/_admin-header', { title: 'Ordini' }) %>
 
+<%
+  const statoSel = Array.isArray(filters.stato) ? filters.stato : [];
+  const hasFilters = statoSel.length > 0 || filters.azienda || filters.dal || filters.al;
+  // Costruisce URL export con gli stessi filtri correnti
+  const _qp = new URLSearchParams();
+  statoSel.forEach(s => _qp.append('stato', s));
+  if (filters.azienda) _qp.set('azienda', filters.azienda);
+  if (filters.dal) _qp.set('dal', filters.dal);
+  if (filters.al) _qp.set('al', filters.al);
+  const exportUrl = '/admin/orders/export.csv' + (_qp.toString() ? ('?' + _qp.toString()) : '');
+%>
+
 <div class="admin-section-header">
-  <form action="/admin/orders" method="GET" class="filter-bar">
-    <select name="stato" class="form-control form-control--sm" onchange="this.form.submit()">
-      <option value="">Tutti gli stati</option>
-      <% statuses.forEach(s => { %>
-        <option value="<%= s %>" <%= (filters.stato === s) ? 'selected' : '' %>><%= s %></option>
-      <% }) %>
-    </select>
-    <input type="text" name="azienda" class="form-control form-control--sm" placeholder="Cerca azienda..."
-           value="<%= filters.azienda || '' %>">
-    <button type="submit" class="btn btn-outline btn-sm">Filtra</button>
-    <a href="/admin/orders" class="btn btn-outline btn-sm">Reset</a>
+  <form action="/admin/orders" method="GET" class="admin-filters">
+    <div class="admin-filters__row">
+      <div class="admin-filters__group">
+        <label class="form-label form-label--sm">Stato</label>
+        <div class="checkbox-pills" role="group" aria-label="Filtra per stato">
+          <% statuses.forEach(s => {
+               const checked = statoSel.includes(s);
+          %>
+            <label class="checkbox-pill <%= checked ? 'is-checked' : '' %>">
+              <input type="checkbox" name="stato" value="<%= s %>" <%= checked ? 'checked' : '' %>>
+              <span><%= s %></span>
+            </label>
+          <% }) %>
+        </div>
+      </div>
+    </div>
+
+    <div class="admin-filters__row">
+      <div class="admin-filters__group">
+        <label for="f-azienda" class="form-label form-label--sm">Azienda</label>
+        <input id="f-azienda" type="text" name="azienda" class="form-control form-control--sm"
+               placeholder="Nome azienda..." value="<%= filters.azienda || '' %>">
+      </div>
+      <div class="admin-filters__group">
+        <label for="f-dal" class="form-label form-label--sm">Dal</label>
+        <input id="f-dal" type="date" name="dal" class="form-control form-control--sm" value="<%= filters.dal || '' %>">
+      </div>
+      <div class="admin-filters__group">
+        <label for="f-al" class="form-label form-label--sm">Al</label>
+        <input id="f-al" type="date" name="al" class="form-control form-control--sm" value="<%= filters.al || '' %>">
+      </div>
+      <div class="admin-filters__actions">
+        <button type="submit" class="btn btn-primary btn-sm">Applica filtri</button>
+        <% if (hasFilters) { %>
+          <a href="/admin/orders" class="btn btn-outline btn-sm">Reset</a>
+        <% } %>
+        <a href="<%= exportUrl %>" class="btn btn-outline btn-sm" download>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:text-bottom" aria-hidden="true"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Esporta CSV
+        </a>
+      </div>
+    </div>
+
+    <% if (typeof totalCount !== 'undefined') { %>
+      <div class="admin-filters__summary">
+        <%= totalCount %> ordin<%= totalCount === 1 ? 'e' : 'i' %> <%= hasFilters ? 'corrispondenti ai filtri' : 'totali' %>
+      </div>
+    <% } %>
   </form>
 </div>
 
 <% if (!orders || orders.length === 0) { %>
   <%- include('../partials/_empty-state', {
     icon: 'orders',
-    title: filters.stato || filters.azienda ? 'Nessun ordine per questi filtri' : 'Nessun ordine ancora',
-    message: filters.stato || filters.azienda
+    title: hasFilters ? 'Nessun ordine per questi filtri' : 'Nessun ordine ancora',
+    message: hasFilters
       ? 'Prova a modificare o rimuovere i filtri per vedere più risultati.'
       : 'Gli ordini ricevuti compariranno qui appena un cliente completerà un acquisto.',
-    cta: (filters.stato || filters.azienda) ? { href: '/admin/orders', label: 'Rimuovi filtri', primary: false } : null
+    cta: hasFilters ? { href: '/admin/orders', label: 'Rimuovi filtri', primary: false } : null
   }) %>
 <% } else { %>
   <table class="data-table">
@@ -53,6 +102,21 @@
       <% }) %>
     </tbody>
   </table>
+
+  <% if (pagination && pagination.total > 1) { %>
+    <nav class="pagination" aria-label="Paginazione">
+      <% for (let p = 1; p <= pagination.total; p++) {
+           const pq = new URLSearchParams();
+           statoSel.forEach(s => pq.append('stato', s));
+           if (filters.azienda) pq.set('azienda', filters.azienda);
+           if (filters.dal) pq.set('dal', filters.dal);
+           if (filters.al) pq.set('al', filters.al);
+           pq.set('pagina', p);
+      %>
+        <a href="/admin/orders?<%= pq.toString() %>" class="pagination__link <%= p === pagination.current ? 'is-current' : '' %>"><%= p %></a>
+      <% } %>
+    </nav>
+  <% } %>
 <% } %>
 
 <%- include('../partials/_admin-footer') %>

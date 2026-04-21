@@ -772,6 +772,24 @@ tr:last-child td { border-bottom: none; }
 /* ── Filter bar ──────────────────────────────────────────────────── */
 .filter-bar { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
 
+/* ── Admin filters (avanzati) ────────────────────────────────────── */
+.admin-filters { display: flex; flex-direction: column; gap: .9rem; background: var(--bg-soft); border: 1px solid var(--border); border-radius: var(--r-md); padding: 1rem 1.1rem; }
+.admin-filters__row { display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-end; }
+.admin-filters__group { display: flex; flex-direction: column; gap: .25rem; min-width: 0; flex: 1 1 auto; }
+.admin-filters__group .form-control--sm { min-width: 150px; }
+.admin-filters__actions { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; margin-left: auto; }
+.admin-filters__summary { font-size: .8rem; color: var(--text-muted); }
+.form-label--sm { font-size: .72rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; }
+.form-control--sm { padding: 6px 10px; font-size: .85rem; }
+
+.checkbox-pills { display: flex; flex-wrap: wrap; gap: .4rem; }
+.checkbox-pill { position: relative; cursor: pointer; user-select: none; }
+.checkbox-pill input { position: absolute; opacity: 0; pointer-events: none; }
+.checkbox-pill > span { display: inline-block; padding: 5px 12px; border: 1px solid var(--border); border-radius: var(--r-full); background: var(--bg-white); font-size: .75rem; font-weight: 700; color: var(--text-muted); transition: all var(--t-fast); }
+.checkbox-pill:hover > span { border-color: var(--blue-300); color: var(--text); }
+.checkbox-pill.is-checked > span, .checkbox-pill input:checked + span { background: var(--primary); color: #fff; border-color: var(--primary); }
+.checkbox-pill input:focus-visible + span { outline: 2px solid var(--blue-300); outline-offset: 2px; }
+
 /* ── Toggle button ───────────────────────────────────────────────── */
 .toggle-btn { width: 32px; height: 20px; border: none; border-radius: var(--r-full); cursor: pointer; font-size: .75rem; font-weight: 800; transition: all var(--t-fast); }
 .toggle-btn--on  { background: var(--success); color: #fff; }
