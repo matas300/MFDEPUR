@@ -15,6 +15,23 @@ const orderCtrl = require('./controllers/orderController');
 
 const app = express();
 
+const IS_PROD = process.env.NODE_ENV === 'production';
+
+// ── Trust proxy in prod (reverse proxy Nginx/Cloudflare/Hostinger) ────────────
+// Necessario per req.secure, req.ip, cookie Secure e rate limit per-IP.
+if (IS_PROD) {
+  app.set('trust proxy', 1);
+}
+
+// ── Redirect HTTPS in prod ────────────────────────────────────────────────────
+// Applicato PRIMA del webhook Stripe: anche i webhook devono arrivare in HTTPS.
+if (IS_PROD) {
+  app.use((req, res, next) => {
+    if (req.secure || req.headers['x-forwarded-proto'] === 'https') return next();
+    return res.redirect(301, `https://${req.headers.host}${req.originalUrl}`);
+  });
+}
+
 // ── Stripe webhook (deve ricevere rawBody PRIMA di express.json) ──────────────
 app.post('/stripe/webhook',
   express.raw({ type: 'application/json' }),
@@ -35,6 +52,11 @@ app.use(helmet({
       connectSrc: ["'self'", 'api.stripe.com'],
     },
   },
+  // HSTS: 1 anno, includeSubDomains, preload. Attivo solo in prod — in dev
+  // disattivato per non "appiccicare" localhost all'HTTPS nei browser.
+  hsts: IS_PROD ? { maxAge: 31536000, includeSubDomains: true, preload: true } : false,
+  // Helmet aggiunge già X-Content-Type-Options, X-Frame-Options, Referrer-Policy.
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
 }));
 
 app.use(express.json());
