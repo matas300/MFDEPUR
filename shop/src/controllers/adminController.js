@@ -54,7 +54,7 @@ exports.getOrders = async (req, res) => {
   const where = {};
 
   if (stato) where.status = stato;
-  if (azienda) where.company = { name: { contains: azienda, mode: 'insensitive' } };
+  if (azienda) where.company = { name: { contains: azienda } };
 
   const [orders, total] = await Promise.all([
     prisma.order.findMany({
@@ -123,8 +123,8 @@ exports.getCompanies = async (req, res) => {
   if (stato) where.status = stato;
   if (cerca) {
     where.OR = [
-      { name: { contains: cerca, mode: 'insensitive' } },
-      { vatNumber: { contains: cerca, mode: 'insensitive' } },
+      { name: { contains: cerca } },
+      { vatNumber: { contains: cerca } },
     ];
   }
 

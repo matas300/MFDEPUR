@@ -19,9 +19,9 @@ exports.getCatalog = async (req, res) => {
 
   if (cerca) {
     where.OR = [
-      { name: { contains: cerca, mode: 'insensitive' } },
-      { shortDesc: { contains: cerca, mode: 'insensitive' } },
-      { sku: { contains: cerca, mode: 'insensitive' } },
+      { name: { contains: cerca } },
+      { shortDesc: { contains: cerca } },
+      { sku: { contains: cerca } },
     ];
   }
 
@@ -81,8 +81,8 @@ exports.adminList = async (req, res) => {
 
   if (cerca) {
     where.OR = [
-      { name: { contains: cerca, mode: 'insensitive' } },
-      { sku: { contains: cerca, mode: 'insensitive' } },
+      { name: { contains: cerca } },
+      { sku: { contains: cerca } },
     ];
   }
   if (categoria) where.categoryId = categoria;
