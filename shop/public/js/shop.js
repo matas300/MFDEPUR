@@ -526,3 +526,168 @@ document.addEventListener('click', (e) => {
   e.preventDefault();
   window.print();
 });
+
+// ── Confirm modal ────────────────────────────────────────────────────────────
+// Uso: <form data-confirm="Sei sicuro?" data-confirm-action="Elimina">
+// oppure: <button type="button" data-confirm-click="..." data-confirm-action="...">
+const _confirmState = { resolve: null, overlay: null };
+
+function showConfirm({ message, actionLabel = 'Conferma', cancelLabel = 'Annulla', danger = true }) {
+  return new Promise(resolve => {
+    // Un solo modal alla volta
+    if (_confirmState.overlay) _confirmState.overlay.remove();
+
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-labelledby', 'confirm-modal-msg');
+
+    const dialog = document.createElement('div');
+    dialog.className = 'modal-dialog';
+
+    const msg = document.createElement('p');
+    msg.id = 'confirm-modal-msg';
+    msg.className = 'modal-message';
+    msg.textContent = message;
+
+    const actions = document.createElement('div');
+    actions.className = 'modal-actions';
+
+    const cancelBtn = document.createElement('button');
+    cancelBtn.type = 'button';
+    cancelBtn.className = 'btn btn-outline';
+    cancelBtn.textContent = cancelLabel;
+
+    const okBtn = document.createElement('button');
+    okBtn.type = 'button';
+    okBtn.className = 'btn ' + (danger ? 'btn-danger' : 'btn-primary');
+    okBtn.textContent = actionLabel;
+
+    actions.append(cancelBtn, okBtn);
+    dialog.append(msg, actions);
+    overlay.append(dialog);
+    document.body.append(overlay);
+    document.body.style.overflow = 'hidden';
+
+    const cleanup = (result) => {
+      document.body.style.overflow = '';
+      document.removeEventListener('keydown', onKey);
+      overlay.remove();
+      _confirmState.overlay = null;
+      resolve(result);
+    };
+    const onKey = (ev) => {
+      if (ev.key === 'Escape') cleanup(false);
+      if (ev.key === 'Enter') cleanup(true);
+    };
+    cancelBtn.addEventListener('click', () => cleanup(false));
+    okBtn.addEventListener('click', () => cleanup(true));
+    overlay.addEventListener('click', (ev) => { if (ev.target === overlay) cleanup(false); });
+    document.addEventListener('keydown', onKey);
+
+    _confirmState.overlay = overlay;
+    // Focus inside dialog (sul cancel per default, più sicuro)
+    setTimeout(() => cancelBtn.focus(), 10);
+  });
+}
+window.showConfirm = showConfirm;
+
+document.addEventListener('submit', async (e) => {
+  const form = e.target;
+  if (!(form instanceof HTMLFormElement)) return;
+  const msg = form.getAttribute('data-confirm');
+  if (!msg || form.dataset.confirmed === '1') return;
+  e.preventDefault();
+  const ok = await showConfirm({
+    message: msg,
+    actionLabel: form.getAttribute('data-confirm-action') || 'Conferma',
+    danger: form.getAttribute('data-confirm-danger') !== 'false',
+  });
+  if (ok) {
+    form.dataset.confirmed = '1';
+    if (typeof form.requestSubmit === 'function') form.requestSubmit();
+    else form.submit();
+  }
+}, true);
+
+// ── Inline validation ────────────────────────────────────────────────────────
+// Validatori italiani comuni
+const _validators = {
+  email: v => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v),
+  vatIT: v => /^\d{11}$/.test(v.replace(/\s/g, '').replace(/^IT/i, '')),
+  cap: v => /^\d{5}$/.test(v.trim()),
+  phone: v => /^[+]?[\d\s().-]{6,20}$/.test(v.trim()),
+};
+
+function _validateField(el) {
+  const type = el.getAttribute('data-validate');
+  if (!type) return true;
+  const v = el.value || '';
+  // Campo vuoto: validazione solo se required
+  if (!v) {
+    if (el.required) {
+      _setFieldError(el, 'Campo obbligatorio');
+      return false;
+    }
+    _clearFieldError(el);
+    return true;
+  }
+  const fn = _validators[type];
+  if (fn && !fn(v)) {
+    const msgs = {
+      email: 'Inserisci un indirizzo email valido',
+      vatIT: 'La Partita IVA italiana deve avere 11 cifre',
+      cap: 'Il CAP deve essere di 5 cifre',
+      phone: 'Numero di telefono non valido',
+    };
+    _setFieldError(el, msgs[type] || 'Valore non valido');
+    return false;
+  }
+  _clearFieldError(el);
+  return true;
+}
+
+function _setFieldError(el, msg) {
+  el.classList.add('is-invalid');
+  el.setAttribute('aria-invalid', 'true');
+  let err = el.parentElement && el.parentElement.querySelector('.field-error');
+  if (!err) {
+    err = document.createElement('small');
+    err.className = 'field-error';
+    err.setAttribute('role', 'alert');
+    (el.parentElement || el).appendChild(err);
+  }
+  err.textContent = msg;
+}
+
+function _clearFieldError(el) {
+  el.classList.remove('is-invalid');
+  el.removeAttribute('aria-invalid');
+  const err = el.parentElement && el.parentElement.querySelector('.field-error');
+  if (err) err.remove();
+}
+
+document.addEventListener('blur', (e) => {
+  const el = e.target;
+  if (el && el.matches && el.matches('[data-validate]')) _validateField(el);
+}, true);
+
+document.addEventListener('input', (e) => {
+  const el = e.target;
+  if (el && el.matches && el.matches('[data-validate].is-invalid')) _validateField(el);
+}, true);
+
+document.addEventListener('submit', (e) => {
+  const form = e.target;
+  if (!(form instanceof HTMLFormElement)) return;
+  const fields = form.querySelectorAll('[data-validate]');
+  if (!fields.length) return;
+  let allValid = true;
+  fields.forEach(f => { if (!_validateField(f)) allValid = false; });
+  if (!allValid) {
+    e.preventDefault();
+    const firstInvalid = form.querySelector('[data-validate].is-invalid');
+    if (firstInvalid) firstInvalid.focus();
+  }
+}, true);

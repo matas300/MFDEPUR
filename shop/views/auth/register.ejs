@@ -24,7 +24,7 @@
         <div class="form-group">
           <label for="vatNumber">Partita IVA *</label>
           <input type="text" id="vatNumber" name="vatNumber" class="form-control"
-                 placeholder="IT12345678901"
+                 placeholder="IT12345678901" data-validate="vatIT"
                  value="<%= typeof body !== 'undefined' ? body.vatNumber || '' : '' %>" required>
         </div>
       </div>
@@ -36,7 +36,7 @@
         </div>
         <div class="form-group">
           <label for="phone">Telefono *</label>
-          <input type="tel" id="phone" name="phone" class="form-control"
+          <input type="tel" id="phone" name="phone" class="form-control" data-validate="phone"
                  value="<%= typeof body !== 'undefined' ? body.phone || '' : '' %>" required>
         </div>
       </div>
@@ -68,7 +68,7 @@
       </div>
       <div class="form-group">
         <label for="email">Email *</label>
-        <input type="email" id="email" name="email" class="form-control"
+        <input type="email" id="email" name="email" class="form-control" data-validate="email"
                value="<%= typeof body !== 'undefined' ? body.email || '' : '' %>" required autocomplete="email">
       </div>
       <div class="form-row">

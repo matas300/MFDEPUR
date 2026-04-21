@@ -19,7 +19,7 @@
         <%= a.postalCode %> <%= a.city %> (<%= a.province %>)<br>
         <%= a.country %>
         <form action="/account/addresses/<%= a.id %>/delete" method="POST" style="margin-top:1rem"
-              onsubmit="return confirm('Eliminare questo indirizzo?')">
+              data-confirm="Eliminare questo indirizzo?" data-confirm-action="Elimina">
           <button type="submit" class="btn btn-danger-outline btn-sm">Elimina</button>
         </form>
       </div>

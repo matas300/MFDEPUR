@@ -79,7 +79,7 @@
           <td class="table-actions">
             <a href="/admin/products/<%= p.id %>/edit" class="btn btn-outline btn-sm">Modifica</a>
             <form action="/admin/products/<%= p.id %>/delete" method="POST" style="display:inline"
-                  onsubmit="return confirm('Disattivare il prodotto?')">
+                  data-confirm="Disattivare questo prodotto?" data-confirm-action="Disattiva">
               <button type="submit" class="btn btn-danger-outline btn-sm">Disattiva</button>
             </form>
           </td>

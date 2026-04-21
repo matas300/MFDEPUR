@@ -164,7 +164,7 @@
       <div class="card" style="margin-top:1rem">
         <h3 style="color:var(--danger)">Zona pericolosa</h3>
         <form action="/admin/products/<%= product.id %>/delete" method="POST"
-              onsubmit="return confirm('Disattivare il prodotto \'<%= product.name.replace(/\'/g, '') %>\'?')">
+              data-confirm="Disattivare il prodotto <%= product.name %>?" data-confirm-action="Disattiva">
           <button type="submit" class="btn btn-danger-outline btn-block">Disattiva prodotto</button>
         </form>
       </div>

@@ -1217,3 +1217,45 @@ tr:last-child td { border-bottom: none; }
 }
 @keyframes btn-spin { to { transform: rotate(360deg); } }
 
+
+/* ── Confirm modal ───────────────────────────────────────────────── */
+.modal-overlay {
+  position: fixed; inset: 0; z-index: 1000;
+  background: rgba(15, 23, 42, .55);
+  display: flex; align-items: center; justify-content: center;
+  padding: 1rem;
+  animation: modal-fade var(--t-fast) ease-out;
+}
+.modal-dialog {
+  background: var(--bg-white);
+  border-radius: var(--r-lg);
+  padding: 1.75rem;
+  max-width: 440px; width: 100%;
+  box-shadow: 0 20px 60px -10px rgba(0,0,0,.3);
+  animation: modal-pop var(--t-fast) cubic-bezier(.2,.9,.3,1.2);
+}
+.modal-message { margin: 0 0 1.25rem; font-size: 1rem; color: var(--text); line-height: 1.5; }
+.modal-actions { display: flex; gap: .6rem; justify-content: flex-end; flex-wrap: wrap; }
+@keyframes modal-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes modal-pop  { from { transform: scale(.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .modal-overlay, .modal-dialog { animation: none; }
+}
+
+/* ── Inline field validation ─────────────────────────────────────── */
+.form-control.is-invalid,
+.is-invalid {
+  border-color: var(--danger, #dc2626) !important;
+  background-color: rgba(220, 38, 38, .04);
+}
+.form-control.is-invalid:focus,
+.is-invalid:focus {
+  outline-color: var(--danger, #dc2626);
+}
+.field-error {
+  display: block;
+  color: var(--danger, #dc2626);
+  font-size: .8rem;
+  font-weight: 600;
+  margin-top: .35rem;
+}
