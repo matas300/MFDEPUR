@@ -57,15 +57,51 @@ function updateCartBadge(count) {
 }
 
 function showToast(message, type = 'success') {
+  const iconPaths = {
+    success: ['polyline', { points: '20 6 9 17 4 12' }],
+    error:   ['path', { d: 'M12 2a10 10 0 100 20 10 10 0 000-20zM9 9l6 6M15 9l-6 6' }],
+    info:    ['path', { d: 'M12 2a10 10 0 100 20 10 10 0 000-20zM12 8h.01M12 12v4' }],
+  };
+  const SVG_NS = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(SVG_NS, 'svg');
+  svg.setAttribute('class', 'toast__icon');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('fill', 'none');
+  svg.setAttribute('stroke', 'currentColor');
+  svg.setAttribute('stroke-width', '2.5');
+  svg.setAttribute('stroke-linecap', 'round');
+  svg.setAttribute('stroke-linejoin', 'round');
+  const [tag, attrs] = iconPaths[type] || iconPaths.info;
+  const shape = document.createElementNS(SVG_NS, tag);
+  Object.entries(attrs).forEach(([k, v]) => shape.setAttribute(k, v));
+  svg.appendChild(shape);
+
+  const msg = document.createElement('span');
+  msg.className = 'toast__msg';
+  msg.textContent = message;
+
+  const closeBtn = document.createElement('button');
+  closeBtn.type = 'button';
+  closeBtn.className = 'toast__close';
+  closeBtn.setAttribute('aria-label', 'Chiudi');
+  closeBtn.textContent = '×';
+
   const toast = document.createElement('div');
   toast.className = `toast toast--${type}`;
-  toast.textContent = message;
+  toast.setAttribute('role', type === 'error' ? 'alert' : 'status');
+  toast.setAttribute('aria-live', type === 'error' ? 'assertive' : 'polite');
+  toast.appendChild(svg);
+  toast.appendChild(msg);
+  toast.appendChild(closeBtn);
   document.body.appendChild(toast);
-  requestAnimationFrame(() => toast.classList.add('toast--visible'));
-  setTimeout(() => {
+
+  const dismiss = () => {
     toast.classList.remove('toast--visible');
     setTimeout(() => toast.remove(), 300);
-  }, 3000);
+  };
+  closeBtn.addEventListener('click', dismiss);
+  requestAnimationFrame(() => toast.classList.add('toast--visible'));
+  setTimeout(dismiss, 4000);
 }
 
 async function apiFetch(url, options = {}) {
