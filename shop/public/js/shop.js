@@ -112,10 +112,20 @@ function showToast(message, type = 'success') {
   setTimeout(dismiss, 4000);
 }
 
+function getCsrfToken() {
+  const el = document.querySelector('meta[name="csrf-token"]');
+  return el ? el.getAttribute('content') : '';
+}
+
 async function apiFetch(url, options = {}) {
+  const headers = {
+    'Content-Type': 'application/json',
+    'x-csrf-token': getCsrfToken(),
+    ...options.headers,
+  };
   const res = await fetch(url, {
-    headers: { 'Content-Type': 'application/json', ...options.headers },
     ...options,
+    headers,
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.error || `Errore ${res.status}`);

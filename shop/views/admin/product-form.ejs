@@ -10,6 +10,7 @@
   <div>
     <form action="<%= isEdit ? '/admin/products/' + product.id : '/admin/products' %>"
           method="POST" enctype="multipart/form-data">
+      <%- include('../partials/_csrf') %>
 
       <!-- Dati principali -->
       <div class="card">
@@ -133,6 +134,7 @@
       <% } %>
       <form action="<%= isEdit ? '/admin/products/' + product.id : '/admin/products' %>"
             method="POST" enctype="multipart/form-data" id="image-form">
+        <%- include('../partials/_csrf') %>
         <div class="form-group">
           <label for="image">Carica immagine</label>
           <input type="file" id="image" name="image" class="form-control" accept="image/*">
@@ -165,6 +167,7 @@
         <h3 style="color:var(--danger)">Zona pericolosa</h3>
         <form action="/admin/products/<%= product.id %>/delete" method="POST"
               data-confirm="Disattivare il prodotto <%= product.name %>?" data-confirm-action="Disattiva">
+          <%- include('../partials/_csrf') %>
           <button type="submit" class="btn btn-danger-outline btn-block">Disattiva prodotto</button>
         </form>
       </div>

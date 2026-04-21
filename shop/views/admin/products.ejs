@@ -71,6 +71,7 @@
           </td>
           <td>
             <form action="/admin/products/<%= p.id %>/toggle" method="POST" style="display:inline" class="toggle-form">
+              <%- include('../partials/_csrf') %>
               <button type="submit" class="toggle-btn <%= p.isActive ? 'toggle-btn--on' : 'toggle-btn--off' %>">
                 <%= p.isActive ? '✓' : '✗' %>
               </button>
@@ -80,6 +81,7 @@
             <a href="/admin/products/<%= p.id %>/edit" class="btn btn-outline btn-sm">Modifica</a>
             <form action="/admin/products/<%= p.id %>/delete" method="POST" style="display:inline"
                   data-confirm="Disattivare questo prodotto?" data-confirm-action="Disattiva">
+              <%- include('../partials/_csrf') %>
               <button type="submit" class="btn btn-danger-outline btn-sm">Disattiva</button>
             </form>
           </td>

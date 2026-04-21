@@ -106,6 +106,7 @@
         <div class="cart-actions">
           <a href="/shop" class="btn btn-outline">← Continua gli acquisti</a>
           <form action="/shop/cart/clear" method="POST" data-confirm="Svuotare il carrello? Tutti i prodotti verranno rimossi." data-confirm-action="Svuota">
+            <%- include('../partials/_csrf') %>
             <button type="submit" class="btn btn-danger-outline">Svuota carrello</button>
           </form>
         </div>

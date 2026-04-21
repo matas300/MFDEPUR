@@ -43,6 +43,7 @@
     <div class="admin-sidebar-footer">
       <a href="/" class="admin-nav-item">← Vai al sito</a>
       <form action="/auth/logout" method="POST">
+        <%- include('./_csrf') %>
         <button type="submit" class="admin-nav-item" style="width:100%;text-align:left;background:none;border:none;cursor:pointer;color:inherit;font:inherit;padding:0.6rem 1rem;">Esci</button>
       </form>
     </div>

@@ -101,9 +101,11 @@
 
     try {
       // POST al server: crea ordine + ottiene clientSecret (per Stripe) o redirect (per bonifico)
+      const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+      const csrfToken = csrfMeta ? csrfMeta.getAttribute('content') : '';
       const res = await fetch('/shop/checkout', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'x-csrf-token': csrfToken },
         body: JSON.stringify(formData),
       });
 

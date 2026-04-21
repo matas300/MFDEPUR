@@ -101,6 +101,7 @@
   <div class="admin-sidebar-panel">
     <h3>Aggiorna stato</h3>
     <form action="/admin/orders/<%= order.id %>/status" method="POST">
+      <%- include('../partials/_csrf') %>
       <div class="form-group">
         <select name="status" class="form-control">
           <% ['PENDING','CONFIRMED','PROCESSING','SHIPPED','DELIVERED','CANCELLED','REFUNDED'].forEach(s => { %>

@@ -5,6 +5,12 @@ const helmet = require('helmet');
 const cookieParser = require('cookie-parser');
 const rateLimit = require('express-rate-limit');
 const { injectUser } = require('./middleware/auth');
+const {
+  ensureCsrfSession,
+  injectCsrfToken,
+  doubleCsrfProtection,
+  csrfErrorHandler,
+} = require('./middleware/csrf');
 const orderCtrl = require('./controllers/orderController');
 
 const app = express();
@@ -34,6 +40,12 @@ app.use(helmet({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
+
+// ── CSRF protection (double-submit cookie) ────────────────────────────────────
+// Escluso da /stripe/webhook (montato prima di questo middleware)
+app.use(ensureCsrfSession);
+app.use(doubleCsrfProtection);
+app.use(injectCsrfToken);
 
 // Rate limiting
 app.use('/auth/login', rateLimit({ windowMs: 15 * 60 * 1000, max: 10, message: 'Troppi tentativi, riprova tra 15 minuti.' }));
@@ -75,6 +87,9 @@ app.get('/sitemap.xml', require('./routes/sitemap'));
 app.use((req, res) => {
   res.status(404).render('error', { message: 'Pagina non trovata', code: 404 });
 });
+
+// ── CSRF error handler (prima del generico) ──────────────────────────────────
+app.use(csrfErrorHandler);
 
 // ── Error handler ─────────────────────────────────────────────────────────────
 app.use((err, req, res, next) => {

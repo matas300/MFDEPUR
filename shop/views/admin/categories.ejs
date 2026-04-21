@@ -50,6 +50,7 @@
 
     <!-- Form nuova -->
     <form action="/admin/categories" method="POST" id="new-cat-form">
+      <%- include('../partials/_csrf') %>
       <div class="form-group">
         <label>Nome *</label>
         <input type="text" name="name" class="form-control" required placeholder="es. Antincrostanti">
@@ -64,6 +65,7 @@
 
     <!-- Form modifica (nascosta) -->
     <form action="" method="POST" id="edit-cat-form" style="display:none">
+      <%- include('../partials/_csrf') %>
       <div class="form-group">
         <label>Nome *</label>
         <input type="text" name="name" id="edit-name" class="form-control" required>
