@@ -49,8 +49,16 @@ const GuestCart = {
 function updateCartBadge(count) {
   const badges = document.querySelectorAll('#navCartBadge');
   badges.forEach(badge => {
+    const prev = parseInt(badge.textContent, 10) || 0;
     badge.textContent = count;
     badge.style.display = count > 0 ? '' : 'none';
+    // Pulse solo quando il conteggio aumenta
+    if (count > prev) {
+      badge.classList.remove('is-pulsing');
+      // reflow per riavviare l'animazione
+      void badge.offsetWidth;
+      badge.classList.add('is-pulsing');
+    }
   });
   const mobileSpans = document.querySelectorAll('#mobileCartCount');
   mobileSpans.forEach(el => { el.textContent = count > 0 ? ` (${count})` : ''; });
@@ -691,3 +699,43 @@ document.addEventListener('submit', (e) => {
     if (firstInvalid) firstInvalid.focus();
   }
 }, true);
+
+// ── Back to top ──────────────────────────────────────────────────────────────
+(() => {
+  if (document.getElementById('back-to-top')) return;
+  const btn = document.createElement('button');
+  btn.id = 'back-to-top';
+  btn.type = 'button';
+  btn.setAttribute('aria-label', 'Torna su');
+  btn.className = 'back-to-top';
+  btn.innerHTML = ''; // niente innerHTML di input, costruiamo via DOM
+  const svgNS = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(svgNS, 'svg');
+  svg.setAttribute('width', '20'); svg.setAttribute('height', '20');
+  svg.setAttribute('viewBox', '0 0 24 24'); svg.setAttribute('fill', 'none');
+  svg.setAttribute('stroke', 'currentColor'); svg.setAttribute('stroke-width', '2.5');
+  svg.setAttribute('stroke-linecap', 'round'); svg.setAttribute('stroke-linejoin', 'round');
+  svg.setAttribute('aria-hidden', 'true');
+  const path = document.createElementNS(svgNS, 'polyline');
+  path.setAttribute('points', '18 15 12 9 6 15');
+  svg.appendChild(path);
+  btn.appendChild(svg);
+  document.body.appendChild(btn);
+
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  btn.addEventListener('click', () => {
+    window.scrollTo({ top: 0, behavior: reduce ? 'auto' : 'smooth' });
+  });
+
+  const onScroll = () => {
+    btn.classList.toggle('is-visible', window.scrollY > 400);
+  };
+  let ticking = false;
+  window.addEventListener('scroll', () => {
+    if (!ticking) {
+      requestAnimationFrame(() => { onScroll(); ticking = false; });
+      ticking = true;
+    }
+  }, { passive: true });
+  onScroll();
+})();

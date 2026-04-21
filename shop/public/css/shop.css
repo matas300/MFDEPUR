@@ -1259,3 +1259,43 @@ tr:last-child td { border-bottom: none; }
   font-weight: 600;
   margin-top: .35rem;
 }
+
+/* ── Back to top FAB ─────────────────────────────────────────────── */
+.back-to-top {
+  position: fixed;
+  bottom: 1.5rem; right: 1.5rem;
+  width: 44px; height: 44px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  box-shadow: var(--shadow);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; transform: translateY(12px);
+  pointer-events: none;
+  transition: opacity var(--t), transform var(--t), background var(--t-fast);
+  z-index: 400;
+}
+.back-to-top.is-visible {
+  opacity: 1; transform: translateY(0);
+  pointer-events: auto;
+}
+.back-to-top:hover { background: var(--primary-dark); }
+.back-to-top:focus-visible { outline: 2px solid var(--blue-300); outline-offset: 3px; }
+@media print { .back-to-top { display: none !important; } }
+@media (prefers-reduced-motion: reduce) {
+  .back-to-top { transition: opacity var(--t-fast); transform: none; }
+  .back-to-top.is-visible { transform: none; }
+}
+
+/* ── Cart badge pulse ────────────────────────────────────────────── */
+.shop-cart-badge.is-pulsing { animation: cart-pulse .55s ease-out; }
+@keyframes cart-pulse {
+  0%   { transform: scale(1);   box-shadow: 0 0 0 0 rgba(30,136,229,.55); }
+  40%  { transform: scale(1.4); box-shadow: 0 0 0 10px rgba(30,136,229,0); }
+  100% { transform: scale(1);   box-shadow: 0 0 0 0 rgba(30,136,229,0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .shop-cart-badge.is-pulsing { animation: none; }
+}
