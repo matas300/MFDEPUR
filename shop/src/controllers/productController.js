@@ -4,11 +4,25 @@ const fs = require('fs');
 
 // ── Shop pubblico ─────────────────────────────────────────────────────────────
 
+// Normalizza qualsiasi valore di query in stringa sicura (primo elemento se array)
+function qStr(v) {
+  if (v == null) return '';
+  if (Array.isArray(v)) v = v[0];
+  if (typeof v !== 'string') return '';
+  return v.slice(0, 200); // cap lunghezza per evitare payload giganti
+}
+
 // GET /shop  — catalogo con filtri
 exports.getCatalog = async (req, res) => {
-  const { categoria, cerca, pmin, pmax, ordina, pagina = 1 } = req.query;
+  const categoria = qStr(req.query.categoria);
+  const cerca = qStr(req.query.cerca);
+  const pmin = qStr(req.query.pmin);
+  const pmax = qStr(req.query.pmax);
+  const ordina = qStr(req.query.ordina);
+  const paginaRaw = qStr(req.query.pagina) || '1';
   const PER_PAGE = 12;
-  const skip = (parseInt(pagina) - 1) * PER_PAGE;
+  const paginaNum = Math.max(parseInt(paginaRaw, 10) || 1, 1);
+  const skip = (paginaNum - 1) * PER_PAGE;
 
   const where = { isActive: true };
 
@@ -58,11 +72,11 @@ exports.getCatalog = async (req, res) => {
     products,
     categories,
     pagination: {
-      current: parseInt(pagina),
+      current: paginaNum,
       total: Math.ceil(total / PER_PAGE),
       totalItems: total,
     },
-    filters: { categoria, cerca, pmin: pmin || '', pmax: pmax || '', ordina: ordina || 'newest' },
+    filters: { categoria, cerca, pmin, pmax, ordina: ordina || 'newest' },
     title: 'Catalogo prodotti',
   });
 };
@@ -91,9 +105,12 @@ exports.getProduct = async (req, res) => {
 
 // GET /admin/products
 exports.adminList = async (req, res) => {
-  const { cerca, categoria, pagina = 1 } = req.query;
+  const cerca = qStr(req.query.cerca);
+  const categoria = qStr(req.query.categoria);
+  const paginaRaw = qStr(req.query.pagina) || '1';
   const PER_PAGE = 20;
-  const skip = (parseInt(pagina) - 1) * PER_PAGE;
+  const paginaNum = Math.max(parseInt(paginaRaw, 10) || 1, 1);
+  const skip = (paginaNum - 1) * PER_PAGE;
   const where = {};
 
   if (cerca) {
@@ -118,7 +135,7 @@ exports.adminList = async (req, res) => {
 
   res.render('admin/products', {
     products, categories,
-    pagination: { current: parseInt(pagina), total: Math.ceil(total / PER_PAGE) },
+    pagination: { current: paginaNum, total: Math.ceil(total / PER_PAGE) },
     filters: { cerca, categoria },
     title: 'Gestione prodotti',
   });
