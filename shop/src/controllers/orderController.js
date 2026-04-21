@@ -136,12 +136,24 @@ exports.checkoutCancel = (req, res) => res.redirect('/shop/cart');
 
 // POST /stripe/webhook  (registrata in app.js con rawBody)
 exports.stripeWebhook = async (req, res) => {
+  const secret = process.env.STRIPE_WEBHOOK_SECRET;
+  // Fail-close: senza secret o senza rawBody niente webhook. Evita che in dev
+  // un qualunque POST su /stripe/webhook possa modificare ordini.
+  if (!secret) {
+    console.error('[stripe-webhook] STRIPE_WEBHOOK_SECRET non configurato — rifiuto');
+    return res.status(500).send('Webhook non configurato');
+  }
+  if (!req.rawBody) {
+    return res.status(400).send('Raw body mancante');
+  }
   const sig = req.headers['stripe-signature'];
-  let event;
+  if (!sig) return res.status(400).send('Firma mancante');
 
+  let event;
   try {
-    event = stripe.webhooks.constructEvent(req.rawBody, sig, process.env.STRIPE_WEBHOOK_SECRET);
+    event = stripe.webhooks.constructEvent(req.rawBody, sig, secret);
   } catch (err) {
+    console.warn('[stripe-webhook] firma non valida:', err.message);
     return res.status(400).send(`Webhook error: ${err.message}`);
   }
 
