@@ -319,21 +319,76 @@ exports.getCompanyDetail = async (req, res) => {
 
 const multer = require('multer');
 const path = require('path');
+const fs = require('fs');
+const crypto = require('crypto');
 
-const storage = multer.diskStorage({
-  destination: path.join(__dirname, '../../uploads'),
-  filename: (req, file, cb) => {
-    const unique = Date.now() + '-' + Math.round(Math.random() * 1e9);
-    cb(null, unique + path.extname(file.originalname));
-  },
-});
-const upload = multer({
-  storage,
+const UPLOADS_DIR = path.resolve(__dirname, '../../uploads');
+fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+
+// Magic-number detection per formati immagine ammessi
+function detectImageType(buf) {
+  if (!buf || buf.length < 12) return null;
+  // JPEG: FF D8 FF
+  if (buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff) return { ext: '.jpg', mime: 'image/jpeg' };
+  // PNG: 89 50 4E 47 0D 0A 1A 0A
+  if (buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47 &&
+      buf[4] === 0x0d && buf[5] === 0x0a && buf[6] === 0x1a && buf[7] === 0x0a) {
+    return { ext: '.png', mime: 'image/png' };
+  }
+  // WebP: "RIFF"....?"WEBP"
+  if (buf[0] === 0x52 && buf[1] === 0x49 && buf[2] === 0x46 && buf[3] === 0x46 &&
+      buf[8] === 0x57 && buf[9] === 0x45 && buf[10] === 0x42 && buf[11] === 0x50) {
+    return { ext: '.webp', mime: 'image/webp' };
+  }
+  return null;
+}
+
+const memoryUpload = multer({
+  storage: multer.memoryStorage(),
   limits: { fileSize: (parseInt(process.env.UPLOAD_MAX_SIZE_MB) || 5) * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
-    const allowed = ['.jpg', '.jpeg', '.png', '.webp'];
-    cb(null, allowed.includes(path.extname(file.originalname).toLowerCase()));
+    // Prima barriera: mime dichiarato. Quello reale è verificato dopo via magic-number.
+    const allowedMime = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!allowedMime.includes(file.mimetype)) {
+      return cb(new Error('Formato non ammesso (solo JPG, PNG, WebP)'));
+    }
+    cb(null, true);
   },
 });
+
+// Middleware: valida magic-number e persiste con UUID.
+// Se non c'è file nel body (campo opzionale), passa senza errore.
+function persistImage(req, res, next) {
+  if (!req.file) return next();
+
+  const detected = detectImageType(req.file.buffer);
+  if (!detected) {
+    return res.status(400).render('error', {
+      message: 'File non valido: contenuto non riconosciuto come immagine (JPG/PNG/WebP).',
+      code: 400,
+    });
+  }
+
+  const filename = crypto.randomBytes(16).toString('hex') + detected.ext;
+  const fullPath = path.join(UPLOADS_DIR, filename);
+
+  try {
+    fs.writeFileSync(fullPath, req.file.buffer);
+  } catch (err) {
+    return next(err);
+  }
+
+  req.file.filename = filename;
+  req.file.path = fullPath;
+  req.file.mimetype = detected.mime;
+  // libera memoria
+  req.file.buffer = null;
+  next();
+}
+
+// API retro-compat: `upload.single(field)` espone un array di middleware
+const upload = {
+  single: (field) => [memoryUpload.single(field), persistImage],
+};
 
 module.exports.upload = upload;
