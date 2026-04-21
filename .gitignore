@@ -15,3 +15,17 @@ npm-debug.log*
 # Build
 dist/
 .cache/
+
+# Database locale (SQLite dev)
+shop/prisma/dev.db
+shop/prisma/dev.db-journal
+shop/prisma/*.db-shm
+shop/prisma/*.db-wal
+
+# Claude Code / claude-flow / MCP (stato locale, non condiviso)
+.claude/
+.claude-flow/
+.mcp.json
+
+# Artefatti accidentali (shell typos, test dumps)
+xss.html
