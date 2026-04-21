@@ -6,6 +6,10 @@ exports.getDashboard = async (req, res) => {
   const now = new Date();
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
+  const thirtyDaysAgo = new Date(now);
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 29);
+  thirtyDaysAgo.setHours(0, 0, 0, 0);
+
   const [
     totalOrders,
     ordersThisMonth,
@@ -15,6 +19,7 @@ exports.getDashboard = async (req, res) => {
     totalProducts,
     lowStockProducts,
     recentOrders,
+    last30Orders,
   ] = await Promise.all([
     prisma.order.count({ where: { status: { notIn: ['PENDING', 'PAYMENT_FAILED', 'CANCELLED'] } } }),
     prisma.order.count({ where: { createdAt: { gte: startOfMonth }, status: { notIn: ['PENDING', 'PAYMENT_FAILED', 'CANCELLED'] } } }),
@@ -28,7 +33,30 @@ exports.getDashboard = async (req, res) => {
       orderBy: { createdAt: 'desc' },
       include: { company: true, user: { select: { firstName: true, lastName: true } } },
     }),
+    prisma.order.findMany({
+      where: { createdAt: { gte: thirtyDaysAgo }, status: { notIn: ['PENDING', 'PAYMENT_FAILED', 'CANCELLED'] } },
+      select: { createdAt: true, total: true },
+    }),
   ]);
+
+  // Bucketing client-agnostic: funziona sia su SQLite sia su Postgres
+  const buckets = Array.from({ length: 30 }, (_, i) => {
+    const d = new Date(thirtyDaysAgo);
+    d.setDate(d.getDate() + i);
+    return { date: d, label: d.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' }), orders: 0, revenue: 0 };
+  });
+  last30Orders.forEach(o => {
+    const idx = Math.floor((new Date(o.createdAt) - thirtyDaysAgo) / 86400000);
+    if (idx >= 0 && idx < 30) {
+      buckets[idx].orders += 1;
+      buckets[idx].revenue += Number(o.total);
+    }
+  });
+  const chartData = {
+    labels: buckets.map(b => b.label),
+    orders: buckets.map(b => b.orders),
+    revenue: buckets.map(b => Math.round(b.revenue * 100) / 100),
+  };
 
   res.render('admin/dashboard', {
     stats: {
@@ -41,6 +69,7 @@ exports.getDashboard = async (req, res) => {
     },
     lowStockProducts,
     recentOrders,
+    chartData,
     title: 'Dashboard',
   });
 };
