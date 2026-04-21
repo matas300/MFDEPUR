@@ -1,5 +1,6 @@
 const prisma = require('../config/database');
 const emailUtil = require('../utils/email');
+const { logAudit } = require('../utils/audit');
 
 // GET /admin  — dashboard
 exports.getDashboard = async (req, res) => {
@@ -224,6 +225,7 @@ exports.getOrderDetail = async (req, res) => {
 
 exports.updateOrderStatus = async (req, res) => {
   const { status, adminNotes, trackingNumber } = req.body;
+  const prev = await prisma.order.findUnique({ where: { id: req.params.id }, select: { status: true } });
   const order = await prisma.order.update({
     where: { id: req.params.id },
     data: {
@@ -234,6 +236,13 @@ exports.updateOrderStatus = async (req, res) => {
       deliveredAt: status === 'DELIVERED' ? new Date() : undefined,
     },
     include: { user: true, company: true, items: true },
+  });
+
+  logAudit(req, {
+    action: 'ORDER_STATUS_CHANGE',
+    entityType: 'Order',
+    entityId: order.id,
+    metadata: { from: prev?.status, to: order.status, trackingNumber: trackingNumber || null },
   });
 
   if (req.accepts('json')) return res.json({ ok: true, status: order.status });
@@ -281,6 +290,7 @@ exports.getCompanies = async (req, res) => {
 
 exports.updateCompanyStatus = async (req, res) => {
   const { status, notes } = req.body;
+  const prev = await prisma.company.findUnique({ where: { id: req.params.id }, select: { status: true } });
   const company = await prisma.company.update({
     where: { id: req.params.id },
     data: { status, notes: notes || undefined },
@@ -293,6 +303,13 @@ exports.updateCompanyStatus = async (req, res) => {
       await emailUtil.sendCompanyApproved(user).catch(() => {});
     }
   }
+
+  logAudit(req, {
+    action: `COMPANY_${status}`,
+    entityType: 'Company',
+    entityId: company.id,
+    metadata: { from: prev?.status, to: company.status, companyName: company.name, notes: notes || null },
+  });
 
   if (req.accepts('json')) return res.json({ ok: true, status: company.status });
   res.redirect('/admin/companies?updated=1');

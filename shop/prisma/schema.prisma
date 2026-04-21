@@ -196,3 +196,22 @@ model OrderItem {
   unitPrice   Decimal
   total       Decimal
 }
+
+// ─── AUDIT LOG ────────────────────────────────────────────────────────────────
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  userId      String?  // attore (admin o sistema); null per eventi di sistema
+  userEmail   String?  // snapshot email per tracciabilità anche se user cancellato
+  action      String   // es. COMPANY_APPROVE, ORDER_STATUS_CHANGE, PRODUCT_CREATE
+  entityType  String   // Company, Order, Product, User
+  entityId    String?
+  metadata    String?  // JSON serializzato con before/after o dettagli
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([userId])
+  @@index([createdAt])
+}

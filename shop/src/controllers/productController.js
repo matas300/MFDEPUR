@@ -1,6 +1,7 @@
 const prisma = require('../config/database');
 const path = require('path');
 const fs = require('fs');
+const { logAudit } = require('../utils/audit');
 
 // ── Shop pubblico ─────────────────────────────────────────────────────────────
 
@@ -171,7 +172,8 @@ exports.adminCreate = async (req, res) => {
   }
   data.slug = slug;
 
-  await prisma.product.create({ data });
+  const created = await prisma.product.create({ data });
+  logAudit(req, { action: 'PRODUCT_CREATE', entityType: 'Product', entityId: created.id, metadata: { name: created.name, sku: created.sku } });
   res.redirect('/admin/products?success=1');
 };
 
@@ -181,6 +183,7 @@ exports.adminUpdate = async (req, res) => {
   delete data.slug; // lo slug non cambia dopo la creazione
 
   await prisma.product.update({ where: { id: req.params.id }, data });
+  logAudit(req, { action: 'PRODUCT_UPDATE', entityType: 'Product', entityId: req.params.id, metadata: { name: data.name, priceOnRequest: data.priceOnRequest, isActive: data.isActive } });
   res.redirect(`/admin/products/${req.params.id}/edit?success=1`);
 };
 
@@ -190,6 +193,7 @@ exports.adminDelete = async (req, res) => {
     where: { id: req.params.id },
     data: { isActive: false },
   });
+  logAudit(req, { action: 'PRODUCT_DELETE', entityType: 'Product', entityId: req.params.id });
   res.redirect('/admin/products?deleted=1');
 };
 
