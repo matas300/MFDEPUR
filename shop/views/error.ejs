@@ -1,18 +1,22 @@
 <%- include('partials/_header', { title: 'Errore ' + code }) %>
 
+<% const _map = {
+  404: { icon: '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>', title: 'Pagina non trovata', hint: 'La pagina che cerchi potrebbe essere stata spostata o rimossa.' },
+  403: { icon: '<rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/>', title: 'Accesso negato', hint: 'Non hai i permessi necessari per accedere a questa risorsa.' },
+  500: { icon: '<path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>', title: 'Errore del server', hint: 'Qualcosa è andato storto dalla nostra parte. Riprova fra poco.' },
+};
+const _e = _map[code] || _map[500]; -%>
+
 <div class="container" style="text-align:center;padding:4rem 1rem">
-  <div style="font-size:5rem;font-weight:700;color:var(--primary);opacity:0.15;line-height:1"><%= code %></div>
-  <h1 style="margin-top:-1rem;margin-bottom:0.75rem">
-    <% if (code === 404) { %>Pagina non trovata
-    <% } else if (code === 403) { %>Accesso negato
-    <% } else { %>Si è verificato un errore<% } %>
-  </h1>
-  <p style="color:var(--text-muted);max-width:480px;margin:0 auto 2rem">
-    <%= message %>
+  <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--blue-300);margin-bottom:1rem" aria-hidden="true"><%- _e.icon %></svg>
+  <div style="font-size:4rem;font-weight:800;color:var(--primary);opacity:.15;line-height:1;letter-spacing:-.02em"><%= code %></div>
+  <h1 style="margin-top:-.75rem;margin-bottom:.5rem"><%= _e.title %></h1>
+  <p style="color:var(--text-muted);max-width:500px;margin:0 auto 2rem">
+    <%= message || _e.hint %>
   </p>
-  <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap">
+  <div style="display:flex;gap:.75rem;justify-content:center;flex-wrap:wrap">
     <a href="/shop" class="btn btn-primary">Vai al catalogo</a>
-    <a href="javascript:history.back()" class="btn btn-outline">Torna indietro</a>
+    <a href="/" class="btn btn-outline">Torna alla home</a>
   </div>
 </div>
 

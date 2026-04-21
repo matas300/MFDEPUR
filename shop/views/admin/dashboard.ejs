@@ -101,7 +101,11 @@
   </div>
 
   <% if (!recentOrders || recentOrders.length === 0) { %>
-    <p style="color:var(--text-muted)">Nessun ordine ancora.</p>
+    <%- include('../partials/_empty-state', {
+      icon: 'orders',
+      title: 'Nessun ordine ancora',
+      message: 'Gli ultimi ordini ricevuti compariranno qui non appena un cliente completerà un acquisto.'
+    }) %>
   <% } else { %>
     <table class="data-table">
       <thead>

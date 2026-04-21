@@ -114,11 +114,14 @@
       <% } %>
 
       <% if (products.length === 0) { %>
-        <div class="empty-state">
-          <i class="fa-solid fa-box-open" style="font-size:3rem;color:var(--blue-200);margin-bottom:1rem"></i>
-          <p>Nessun prodotto trovato.</p>
-          <a href="/shop" class="btn btn-outline">Vedi tutti i prodotti</a>
-        </div>
+        <%- include('../partials/_empty-state', {
+          icon: filters.cerca ? 'search' : 'products',
+          title: filters.cerca ? 'Nessun risultato per "' + filters.cerca + '"' : 'Nessun prodotto in questa categoria',
+          message: filters.cerca
+            ? 'Prova un altro termine di ricerca o rimuovi i filtri attivi.'
+            : 'Al momento non ci sono prodotti che corrispondono ai filtri selezionati.',
+          cta: { href: '/shop', label: 'Vedi tutti i prodotti' }
+        }) %>
       <% } else { %>
         <div class="product-grid">
           <% products.forEach(product => { %>

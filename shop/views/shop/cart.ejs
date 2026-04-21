@@ -48,11 +48,12 @@
 
   <%# ── Utente approvato: carrello DB ──────────────────────────────── %>
   <% } else if (!cart || cart.items.length === 0) { %>
-    <div class="empty-state">
-      <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" style="opacity:0.3;margin-bottom:1rem"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
-      <p>Il carrello è vuoto.</p>
-      <a href="/shop" class="btn btn-primary">Vai al catalogo</a>
-    </div>
+    <%- include('../partials/_empty-state', {
+      icon: 'cart',
+      title: 'Il tuo carrello è vuoto',
+      message: 'Aggiungi prodotti dal catalogo per procedere con un ordine.',
+      cta: { href: '/shop', label: 'Vai al catalogo' }
+    }) %>
   <% } else { %>
     <div class="cart-layout">
       <!-- Tabella prodotti -->

@@ -16,7 +16,14 @@
 </div>
 
 <% if (!orders || orders.length === 0) { %>
-  <div class="empty-state"><p>Nessun ordine trovato.</p></div>
+  <%- include('../partials/_empty-state', {
+    icon: 'orders',
+    title: filters.stato || filters.azienda ? 'Nessun ordine per questi filtri' : 'Nessun ordine ancora',
+    message: filters.stato || filters.azienda
+      ? 'Prova a modificare o rimuovere i filtri per vedere più risultati.'
+      : 'Gli ordini ricevuti compariranno qui appena un cliente completerà un acquisto.',
+    cta: (filters.stato || filters.azienda) ? { href: '/admin/orders', label: 'Rimuovi filtri', primary: false } : null
+  }) %>
 <% } else { %>
   <table class="data-table">
     <thead>

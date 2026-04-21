@@ -4,7 +4,11 @@
   <!-- Lista categorie -->
   <div>
     <% if (!categories || categories.length === 0) { %>
-      <div class="empty-state"><p>Nessuna categoria. Creane una!</p></div>
+      <%- include('../partials/_empty-state', {
+        icon: 'box',
+        title: 'Nessuna categoria',
+        message: 'Crea la prima categoria dal form a fianco per organizzare il catalogo.'
+      }) %>
     <% } else { %>
       <table class="data-table">
         <thead>

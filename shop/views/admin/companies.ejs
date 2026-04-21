@@ -16,7 +16,14 @@
 </div>
 
 <% if (!companies || companies.length === 0) { %>
-  <div class="empty-state"><p>Nessuna azienda trovata.</p></div>
+  <%- include('../partials/_empty-state', {
+    icon: 'users',
+    title: 'Nessuna azienda trovata',
+    message: (filters.stato || filters.cerca)
+      ? 'I filtri attivi non hanno prodotto risultati. Prova a rimuoverli.'
+      : 'Le aziende registrate compariranno qui. Gli utenti si registrano dal sito pubblico.',
+    cta: (filters.stato || filters.cerca) ? { href: '/admin/companies', label: 'Rimuovi filtri', primary: false } : null
+  }) %>
 <% } else { %>
   <table class="data-table">
     <thead>
