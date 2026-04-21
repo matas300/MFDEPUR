@@ -75,7 +75,10 @@
 
   function setLoading(loading) {
     submitBtn.disabled = loading;
-    submitBtn.textContent = loading ? 'Elaborazione...' : submitBtn.dataset.originalText || 'Conferma e paga';
+    submitBtn.classList.toggle('is-loading', loading);
+    if (!loading) {
+      submitBtn.textContent = submitBtn.dataset.originalText || submitBtn.textContent;
+    }
   }
 
   function showError(msg) {

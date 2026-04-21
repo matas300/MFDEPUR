@@ -1,6 +1,12 @@
 <%- include('../partials/_header', { title: 'Carrello' }) %>
 
 <div class="container">
+  <nav class="breadcrumb" aria-label="breadcrumb">
+    <a href="/shop">Catalogo</a>
+    <span>/</span>
+    <span>Carrello</span>
+  </nav>
+
   <h1 class="page-title">Il tuo carrello</h1>
 
   <%# ── Guest: carrello localStorage, renderizzato da shop.js ──────── %>

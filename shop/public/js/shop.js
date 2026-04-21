@@ -505,3 +505,16 @@ if (addressSelect && newAddressFields) {
     newAddressFields.style.display = 'none';
   }
 }
+
+// ── Loading state automatico per form con [data-loading] ─────────────────────
+document.addEventListener('submit', (e) => {
+  const form = e.target;
+  if (!form.matches('form[data-loading]')) return;
+  const btn = form.querySelector('button[type="submit"], input[type="submit"]');
+  if (!btn || btn.classList.contains('is-loading')) return;
+  btn.classList.add('is-loading');
+  btn.disabled = true;
+  // Safety: se il submit fallisce lato server (es. 422 con redirect),
+  // la pagina ricarica e lo stato si resetta. Se è SPA, rimuoviamo dopo 15s.
+  setTimeout(() => { btn.classList.remove('is-loading'); btn.disabled = false; }, 15000);
+});
