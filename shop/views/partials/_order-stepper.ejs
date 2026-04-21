@@ -1,0 +1,51 @@
+<%#
+  Stepper visivo stato ordine.
+  Locals: order (con status, createdAt, paidAt, shippedAt, deliveredAt)
+-%>
+<%
+  const steps = [
+    { key: 'CONFIRMED',  label: 'Ordine confermato', date: order.paidAt || order.createdAt },
+    { key: 'PROCESSING', label: 'In preparazione',   date: null },
+    { key: 'SHIPPED',    label: 'Spedito',           date: order.shippedAt },
+    { key: 'DELIVERED',  label: 'Consegnato',        date: order.deliveredAt },
+  ];
+  const rank = { PENDING: 0, PAYMENT_FAILED: 0, CONFIRMED: 1, PROCESSING: 2, SHIPPED: 3, DELIVERED: 4, CANCELLED: -1, REFUNDED: -1 };
+  const currentRank = rank[order.status] ?? 0;
+  const isFailed = order.status === 'CANCELLED' || order.status === 'REFUNDED' || order.status === 'PAYMENT_FAILED';
+  const _fmt = d => d ? new Date(d).toLocaleDateString('it-IT', { day: '2-digit', month: 'short' }) : '';
+-%>
+
+<% if (isFailed) { %>
+  <div class="order-stepper order-stepper--failed" role="status">
+    <div class="order-stepper__fail">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+      <span>
+        <% if (order.status === 'CANCELLED') { %>Ordine annullato
+        <% } else if (order.status === 'REFUNDED') { %>Ordine rimborsato
+        <% } else { %>Pagamento non riuscito<% } %>
+      </span>
+    </div>
+  </div>
+<% } else { %>
+  <ol class="order-stepper" aria-label="Stato ordine">
+    <% steps.forEach((step, i) => {
+      let cls = 'order-stepper__step';
+      if (i < currentRank) cls += ' is-done';
+      else if (i === currentRank) cls += ' is-current';
+    %>
+      <li class="<%= cls %>">
+        <span class="order-stepper__dot" aria-hidden="true">
+          <% if (i < currentRank) { %>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          <% } else { %>
+            <span class="order-stepper__num"><%= i + 1 %></span>
+          <% } %>
+        </span>
+        <span class="order-stepper__label"><%= step.label %></span>
+        <% if (step.date && i <= currentRank) { %>
+          <span class="order-stepper__date"><%= _fmt(step.date) %></span>
+        <% } %>
+      </li>
+    <% }) %>
+  </ol>
+<% } %>

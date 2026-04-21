@@ -518,3 +518,11 @@ document.addEventListener('submit', (e) => {
   // la pagina ricarica e lo stato si resetta. Se è SPA, rimuoviamo dopo 15s.
   setTimeout(() => { btn.classList.remove('is-loading'); btn.disabled = false; }, 15000);
 });
+
+// ── Stampa pagina corrente per elementi con [data-print] ─────────────────────
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-print]');
+  if (!btn) return;
+  e.preventDefault();
+  window.print();
+});

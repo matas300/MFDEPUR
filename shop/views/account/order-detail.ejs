@@ -9,6 +9,11 @@
     <span><%= order.orderNumber %></span>
   </nav>
 
+  <div class="print-header">
+    <strong>MF Depur</strong> — Ricevuta ordine <%= order.orderNumber %><br>
+    <small>www.mfdepur.com</small>
+  </div>
+
   <div class="order-detail-card">
     <div class="order-detail-header">
       <div>
@@ -19,6 +24,8 @@
       </div>
       <span class="order-status order-status--<%= order.status.toLowerCase() %>"><%= order.status %></span>
     </div>
+
+    <%- include('../partials/_order-stepper', { order }) %>
 
     <% if (order.paymentMethod === 'BANK_TRANSFER' && order.status === 'CONFIRMED') { %>
       <div class="alert alert-info" style="margin:1.5rem 0">
@@ -105,8 +112,12 @@
     </div>
   </div>
 
-  <div style="margin-top:1.5rem">
+  <div style="margin-top:1.5rem;display:flex;gap:.75rem;flex-wrap:wrap">
     <a href="/account/orders" class="btn btn-outline">← Tutti gli ordini</a>
+    <button type="button" class="btn btn-outline" data-print>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:text-bottom"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+      Stampa
+    </button>
   </div>
 </div>
 
