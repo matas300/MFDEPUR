@@ -1,7 +1,9 @@
 const router = require('express').Router();
+const crypto = require('crypto');
 const { requireAuth, requireApprovedCompany } = require('../middleware/auth');
 const orderCtrl = require('../controllers/orderController');
 const prisma = require('../config/database');
+const { logAudit } = require('../utils/audit');
 
 router.use(requireAuth);
 
@@ -57,6 +59,108 @@ router.post('/addresses/:id/delete', async (req, res) => {
     where: { id: req.params.id, companyId: req.user.companyId },
   });
   res.redirect('/account/addresses');
+});
+
+// ── GDPR: pagina privacy account ──────────────────────────────────────────────
+router.get('/privacy', (req, res) => {
+  res.render('account/privacy', { title: 'I miei dati (GDPR)' });
+});
+
+// ── GDPR: export dati personali (Art. 15 / 20 GDPR) ───────────────────────────
+// Restituisce un JSON scaricabile con tutti i dati personali dell'utente.
+router.get('/export', async (req, res) => {
+  const user = await prisma.user.findUnique({
+    where: { id: req.user.id },
+    include: {
+      company: { include: { addresses: true } },
+      orders: { include: { items: true, address: true } },
+      sessions: { select: { id: true, expiresAt: true, createdAt: true } },
+    },
+  });
+  if (!user) return res.status(404).render('error', { message: 'Utente non trovato', code: 404 });
+
+  const payload = {
+    exportedAt: new Date().toISOString(),
+    user: {
+      id: user.id,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      phone: user.phone,
+      role: user.role,
+      isEmailVerified: user.isEmailVerified,
+      lastLoginAt: user.lastLoginAt,
+      createdAt: user.createdAt,
+    },
+    company: user.company,
+    orders: user.orders,
+    sessions: user.sessions,
+  };
+
+  logAudit(req, { action: 'GDPR_EXPORT', entityType: 'User', entityId: user.id });
+
+  const stamp = new Date().toISOString().slice(0, 10);
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="mfdepur-export-${user.email}-${stamp}.json"`);
+  res.setHeader('Cache-Control', 'no-store');
+  res.send(JSON.stringify(payload, null, 2));
+});
+
+// ── GDPR: cancellazione account (Art. 17 — diritto all'oblio) ─────────────────
+// Soft delete: anonimizza utente conservando ordini per obblighi fiscali (10 anni
+// per le fatture, art. 2220 c.c.). Email/nome/telefono sostituiti con marker.
+router.post('/delete', async (req, res) => {
+  const { confirm } = req.body;
+  if (confirm !== 'ELIMINA') {
+    return res.render('account/privacy', {
+      title: 'I miei dati (GDPR)',
+      error: 'Per confermare la cancellazione devi digitare esattamente ELIMINA.',
+    });
+  }
+
+  // Admin non può autocancellarsi (rischio di lock-out)
+  if (req.user.role === 'ADMIN') {
+    return res.render('account/privacy', {
+      title: 'I miei dati (GDPR)',
+      error: 'Gli account ADMIN non possono essere cancellati da questa pagina.',
+    });
+  }
+
+  const userId = req.user.id;
+  const originalEmail = req.user.email;
+  // Email univoca → usa hash del vecchio id per non collidere
+  const tag = crypto.randomBytes(6).toString('hex');
+  const anonEmail = `deleted-${tag}@anonymized.local`;
+
+  await prisma.$transaction([
+    prisma.session.deleteMany({ where: { userId } }),
+    prisma.user.update({
+      where: { id: userId },
+      data: {
+        email: anonEmail,
+        password: crypto.randomBytes(32).toString('hex'), // hash invalido — login impossibile
+        firstName: 'Utente',
+        lastName: 'Cancellato',
+        phone: null,
+        emailVerifyToken: null,
+        resetPasswordToken: null,
+        resetPasswordExpires: null,
+        isEmailVerified: false,
+      },
+    }),
+  ]);
+
+  logAudit(req, {
+    action: 'GDPR_DELETE',
+    entityType: 'User',
+    entityId: userId,
+    metadata: { originalEmail, anonEmail },
+  });
+
+  // Logout: pulisce cookie e redirect
+  res.clearCookie('accessToken', { path: '/' });
+  res.clearCookie('refreshToken', { path: '/auth/refresh' });
+  res.redirect('/?deleted=1');
 });
 
 module.exports = router;
