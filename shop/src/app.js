@@ -5,6 +5,7 @@ const helmet = require('helmet');
 const cookieParser = require('cookie-parser');
 const rateLimit = require('express-rate-limit');
 const { injectUser } = require('./middleware/auth');
+const cspNonce = require('./middleware/nonce');
 const {
   ensureCsrfSession,
   injectCsrfToken,
@@ -40,11 +41,24 @@ app.post('/stripe/webhook',
 );
 
 // ── Middleware ────────────────────────────────────────────────────────────────
+// Nonce per CSP: deve stare PRIMA di helmet così la direttiva scriptSrc può leggerlo
+app.use(cspNonce);
+
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", 'js.stripe.com', 'cdn.jsdelivr.net', 'unpkg.com', 'cdnjs.cloudflare.com'],
+      // scriptSrc: niente 'unsafe-inline'. Gli script inline richiedono nonce="<%= cspNonce %>".
+      scriptSrc: [
+        "'self'",
+        (req, res) => `'nonce-${res.locals.cspNonce}'`,
+        'js.stripe.com',
+        'cdn.jsdelivr.net',
+        'unpkg.com',
+        'cdnjs.cloudflare.com',
+      ],
+      // styleSrc: 'unsafe-inline' ancora presente — molti template hanno style="..." inline.
+      // TODO hardening: refactor degli inline style e passaggio a nonce/hash.
       styleSrc: ["'self'", "'unsafe-inline'", 'fonts.googleapis.com', 'cdnjs.cloudflare.com', 'unpkg.com'],
       fontSrc: ["'self'", 'fonts.gstatic.com', 'cdnjs.cloudflare.com', 'data:'],
       frameSrc: ['js.stripe.com'],

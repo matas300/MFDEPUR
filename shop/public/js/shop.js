@@ -749,3 +749,24 @@ document.addEventListener('submit', (e) => {
   }, { passive: true });
   onScroll();
 })();
+
+// ── Delegated handlers per sostituire inline JS (CSP nonce) ────────────────────
+(function initCspSafeHandlers() {
+  // Select/input con classe js-auto-submit → submit automatico del form contenitore
+  document.querySelectorAll('.js-auto-submit').forEach(el => {
+    el.addEventListener('change', () => { if (el.form) el.form.submit(); });
+  });
+
+  // <img class="js-hide-on-error"> nasconde l'elemento se il caricamento fallisce
+  document.querySelectorAll('img.js-hide-on-error').forEach(img => {
+    img.addEventListener('error', () => { img.style.display = 'none'; });
+  });
+
+  // Gallery thumbnails: click cambia l'immagine principale
+  document.querySelectorAll('.js-product-thumb').forEach(thumb => {
+    thumb.addEventListener('click', () => {
+      const main = document.querySelector('.product-main-image');
+      if (main) main.src = thumb.src;
+    });
+  });
+})();

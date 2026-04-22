@@ -2,7 +2,7 @@
 
 <div class="admin-section-header">
   <form action="/admin/companies" method="GET" class="filter-bar">
-    <select name="stato" class="form-control form-control--sm" onchange="this.form.submit()">
+    <select name="stato" class="form-control form-control--sm js-auto-submit">
       <option value="">Tutti gli stati</option>
       <% statuses.forEach(s => { %>
         <option value="<%= s %>" <%= (filters.stato === s) ? 'selected' : '' %>><%= s %></option>

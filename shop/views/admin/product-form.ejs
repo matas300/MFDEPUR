@@ -50,8 +50,7 @@
         <div class="form-group" style="margin-bottom:12px">
           <label style="display:flex;align-items:center;gap:10px;cursor:pointer">
             <input type="checkbox" id="priceOnRequest" name="priceOnRequest" value="on"
-                   <%= (isEdit && product.priceOnRequest) ? 'checked' : '' %>
-                   onchange="togglePriceField(this.checked)">
+                   <%= (isEdit && product.priceOnRequest) ? 'checked' : '' %>>
             <span><strong>Prezzo su richiesta</strong> — mostra "Contattaci per un preventivo" al posto del prezzo</span>
           </label>
         </div>
@@ -69,12 +68,18 @@
                    value="<%= isEdit ? product.unit : 'kg' %>" required>
           </div>
         </div>
-        <script>
-          function togglePriceField(isChecked) {
-            document.getElementById('priceRow').style.opacity = isChecked ? '0.4' : '1';
-            document.getElementById('price').disabled = isChecked;
-          }
-          togglePriceField(<%= (isEdit && product.priceOnRequest) ? 'true' : 'false' %>);
+        <script nonce="<%= cspNonce %>">
+          (function(){
+            const cb = document.getElementById('priceOnRequest');
+            const row = document.getElementById('priceRow');
+            const priceInput = document.getElementById('price');
+            function apply(isChecked) {
+              row.style.opacity = isChecked ? '0.4' : '1';
+              priceInput.disabled = isChecked;
+            }
+            cb.addEventListener('change', () => apply(cb.checked));
+            apply(cb.checked);
+          })();
         </script>
         <div class="form-row">
           <div class="form-group">

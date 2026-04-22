@@ -92,7 +92,7 @@
         <% if (filters.pmax) { %><input type="hidden" name="pmax" value="<%= filters.pmax %>"><% } %>
         <input type="text" name="cerca" class="form-control" placeholder="Cerca prodotto, codice SKU..."
                value="<%= filters.cerca || '' %>">
-        <select name="ordina" class="form-control" style="max-width:200px" aria-label="Ordina per" onchange="this.form.submit()">
+        <select name="ordina" class="form-control js-auto-submit" style="max-width:200px" aria-label="Ordina per">
           <option value="newest"     <%= filters.ordina === 'newest' ? 'selected' : '' %>>Più recenti</option>
           <option value="price-asc"  <%= filters.ordina === 'price-asc' ? 'selected' : '' %>>Prezzo: crescente</option>
           <option value="price-desc" <%= filters.ordina === 'price-desc' ? 'selected' : '' %>>Prezzo: decrescente</option>

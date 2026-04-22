@@ -4,7 +4,7 @@
   <form action="/admin/products" method="GET" class="filter-bar">
     <input type="text" name="cerca" class="form-control form-control--sm" placeholder="Cerca prodotto, SKU..."
            value="<%= filters.cerca || '' %>">
-    <select name="categoria" class="form-control form-control--sm" onchange="this.form.submit()">
+    <select name="categoria" class="form-control form-control--sm js-auto-submit">
       <option value="">Tutte le categorie</option>
       <% categories.forEach(c => { %>
         <option value="<%= c.slug %>" <%= (filters.categoria === c.slug) ? 'selected' : '' %>><%= c.name %></option>
@@ -101,18 +101,20 @@
   <% } %>
 <% } %>
 
-<script>
-// Toggle attivo/disattivo via AJAX
+<script nonce="<%= cspNonce %>">
+// Toggle attivo/disattivo via AJAX (usa apiFetch per includere CSRF token)
 document.querySelectorAll('.toggle-form').forEach(form => {
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const btn = form.querySelector('.toggle-btn');
-    const res = await fetch(form.action, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
-    if (res.ok) {
-      const { isActive } = await res.json();
+    try {
+      const data = await apiFetch(form.action, { method: 'POST' });
+      const isActive = data.isActive;
       btn.textContent = isActive ? '✓' : '✗';
       btn.className = 'toggle-btn ' + (isActive ? 'toggle-btn--on' : 'toggle-btn--off');
       btn.closest('tr').classList.toggle('row--disabled', !isActive);
+    } catch (err) {
+      console.error('toggle failed', err);
     }
   });
 });
