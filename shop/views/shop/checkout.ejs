@@ -4,6 +4,14 @@
 }) %>
 
 <div class="container">
+  <nav class="breadcrumb" aria-label="breadcrumb">
+    <a href="/shop">Catalogo</a>
+    <span>/</span>
+    <a href="/shop/cart">Carrello</a>
+    <span>/</span>
+    <span>Checkout</span>
+  </nav>
+
   <h1 class="page-title">Checkout</h1>
 
   <% if (typeof error !== 'undefined' && error) { %>
@@ -54,7 +62,7 @@
               </div>
               <div class="form-group">
                 <label>CAP *</label>
-                <input type="text" name="postalCode" class="form-control" maxlength="5">
+                <input type="text" name="postalCode" class="form-control" maxlength="5" inputmode="numeric" data-validate="cap">
               </div>
             </div>
             <div class="form-group">
@@ -150,7 +158,7 @@
   </div>
 </div>
 
-<script>
+<script nonce="<%= cspNonce %>">
   window.STRIPE_KEY = '<%= stripePublicKey %>';
 </script>
 <script src="/js/checkout.js"></script>

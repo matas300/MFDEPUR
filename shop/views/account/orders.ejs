@@ -7,10 +7,12 @@
   </div>
 
   <% if (orders.length === 0) { %>
-    <div class="empty-state">
-      <p>Non hai ancora effettuato ordini.</p>
-      <a href="/shop" class="btn btn-primary">Vai al catalogo</a>
-    </div>
+    <%- include('../partials/_empty-state', {
+      icon: 'orders',
+      title: 'Non hai ancora effettuato ordini',
+      message: 'Quando completerai il primo acquisto, troverai qui tutti i dettagli (tracking, fatture, riordino).',
+      cta: { href: '/shop', label: 'Vai al catalogo' }
+    }) %>
   <% } else { %>
     <div class="table-responsive">
       <table class="data-table">

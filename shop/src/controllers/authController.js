@@ -15,12 +15,15 @@ function generateRefreshToken(userId) {
 
 function setTokenCookies(res, accessToken, refreshToken) {
   const isProd = process.env.NODE_ENV === 'production';
+  // Access: 'lax' serve per il redirect post-login (POST→GET cross-navigation)
   res.cookie('accessToken', accessToken, {
     httpOnly: true, secure: isProd, sameSite: 'lax',
     maxAge: 15 * 60 * 1000, // 15 minuti
+    path: '/',
   });
+  // Refresh: 'strict' — viene usato solo via fetch same-origin, nessun redirect cross-site
   res.cookie('refreshToken', refreshToken, {
-    httpOnly: true, secure: isProd, sameSite: 'lax',
+    httpOnly: true, secure: isProd, sameSite: 'strict',
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 giorni
     path: '/auth/refresh',
   });
@@ -146,7 +149,7 @@ exports.logout = async (req, res) => {
   if (refreshToken) {
     await prisma.session.deleteMany({ where: { refreshToken } }).catch(() => {});
   }
-  res.clearCookie('accessToken');
+  res.clearCookie('accessToken', { path: '/' });
   res.clearCookie('refreshToken', { path: '/auth/refresh' });
   res.redirect('/auth/login');
 };
@@ -167,7 +170,7 @@ exports.refresh = async (req, res) => {
     const newAccessToken = generateAccessToken(payload.userId);
     const isProd = process.env.NODE_ENV === 'production';
     res.cookie('accessToken', newAccessToken, {
-      httpOnly: true, secure: isProd, sameSite: 'lax', maxAge: 15 * 60 * 1000,
+      httpOnly: true, secure: isProd, sameSite: 'lax', maxAge: 15 * 60 * 1000, path: '/',
     });
     res.json({ ok: true });
   } catch {
@@ -210,7 +213,11 @@ exports.getResetPassword = async (req, res) => {
 
 // POST /auth/reset-password
 exports.postResetPassword = async (req, res) => {
+  const errors = validationResult(req);
   const { token, password } = req.body;
+  if (!errors.isEmpty()) {
+    return res.render('auth/reset-password', { token, error: errors.array()[0].msg });
+  }
   const user = await prisma.user.findFirst({
     where: { resetPasswordToken: token, resetPasswordExpires: { gt: new Date() } },
   });

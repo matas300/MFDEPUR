@@ -38,6 +38,61 @@
   <% } %>
 </div>
 
+<!-- Trend ordini/fatturato (ultimi 30 giorni) -->
+<div class="admin-section">
+  <div class="admin-section-header">
+    <h2>Trend ultimi 30 giorni</h2>
+  </div>
+  <div style="position:relative;height:280px">
+    <canvas id="trendChart" aria-label="Grafico trend ordini e fatturato" role="img"></canvas>
+  </div>
+</div>
+
+<script id="chart-data" type="application/json" nonce="<%= cspNonce %>"><%- JSON.stringify(chartData) %></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script nonce="<%= cspNonce %>">
+(function () {
+  const data = JSON.parse(document.getElementById('chart-data').textContent);
+  const ctx = document.getElementById('trendChart');
+  if (!ctx || !window.Chart) return;
+  new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: data.labels,
+      datasets: [
+        {
+          label: 'Ordini',
+          data: data.orders,
+          borderColor: '#1e40af',
+          backgroundColor: 'rgba(30,64,175,.1)',
+          yAxisID: 'y',
+          tension: .3,
+          fill: true,
+        },
+        {
+          label: 'Fatturato (€)',
+          data: data.revenue,
+          borderColor: '#10b981',
+          backgroundColor: 'rgba(16,185,129,.1)',
+          yAxisID: 'y1',
+          tension: .3,
+          fill: true,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      scales: {
+        y:  { type: 'linear', position: 'left',  title: { display: true, text: 'Ordini' }, beginAtZero: true, ticks: { precision: 0 } },
+        y1: { type: 'linear', position: 'right', title: { display: true, text: 'Fatturato (€)' }, beginAtZero: true, grid: { drawOnChartArea: false } },
+      },
+    },
+  });
+})();
+</script>
+
 <!-- Ultimi ordini -->
 <div class="admin-section">
   <div class="admin-section-header">
@@ -46,7 +101,11 @@
   </div>
 
   <% if (!recentOrders || recentOrders.length === 0) { %>
-    <p style="color:var(--text-muted)">Nessun ordine ancora.</p>
+    <%- include('../partials/_empty-state', {
+      icon: 'orders',
+      title: 'Nessun ordine ancora',
+      message: 'Gli ultimi ordini ricevuti compariranno qui non appena un cliente completerà un acquisto.'
+    }) %>
   <% } else { %>
     <table class="data-table">
       <thead>

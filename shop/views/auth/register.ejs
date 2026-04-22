@@ -13,7 +13,8 @@
       </div>
     <% } %>
 
-    <form action="/auth/register" method="POST" class="auth-form">
+    <form action="/auth/register" method="POST" class="auth-form" data-loading>
+      <%- include('../partials/_csrf') %>
       <h3 class="form-section-title">Dati azienda</h3>
       <div class="form-row">
         <div class="form-group">
@@ -24,7 +25,7 @@
         <div class="form-group">
           <label for="vatNumber">Partita IVA *</label>
           <input type="text" id="vatNumber" name="vatNumber" class="form-control"
-                 placeholder="IT12345678901"
+                 placeholder="IT12345678901" data-validate="vatIT"
                  value="<%= typeof body !== 'undefined' ? body.vatNumber || '' : '' %>" required>
         </div>
       </div>
@@ -36,7 +37,7 @@
         </div>
         <div class="form-group">
           <label for="phone">Telefono *</label>
-          <input type="tel" id="phone" name="phone" class="form-control"
+          <input type="tel" id="phone" name="phone" class="form-control" data-validate="phone"
                  value="<%= typeof body !== 'undefined' ? body.phone || '' : '' %>" required>
         </div>
       </div>
@@ -68,17 +69,17 @@
       </div>
       <div class="form-group">
         <label for="email">Email *</label>
-        <input type="email" id="email" name="email" class="form-control"
+        <input type="email" id="email" name="email" class="form-control" data-validate="email"
                value="<%= typeof body !== 'undefined' ? body.email || '' : '' %>" required autocomplete="email">
       </div>
       <div class="form-row">
         <div class="form-group">
-          <label for="password">Password * <small>(min. 8 caratteri)</small></label>
-          <input type="password" id="password" name="password" class="form-control" minlength="8" required>
+          <label for="password">Password * <small>(min. 10 caratteri, 1 maiuscola, 1 minuscola, 1 numero)</small></label>
+          <input type="password" id="password" name="password" class="form-control" minlength="10" required>
         </div>
         <div class="form-group">
           <label for="confirmPassword">Conferma password *</label>
-          <input type="password" id="confirmPassword" name="confirmPassword" class="form-control" minlength="8" required>
+          <input type="password" id="confirmPassword" name="confirmPassword" class="form-control" minlength="10" required>
         </div>
       </div>
 

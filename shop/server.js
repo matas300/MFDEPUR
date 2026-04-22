@@ -24,4 +24,13 @@ process.on('SIGINT', async () => {
   process.exit(0);
 });
 
+// Safety net: non lasciamo morire il processo per una promise rejection
+// in un route handler — la loggiamo e proseguiamo.
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('❗ Unhandled Rejection:', reason);
+});
+process.on('uncaughtException', (err) => {
+  console.error('❗ Uncaught Exception:', err);
+});
+
 start();

@@ -4,7 +4,11 @@
   <!-- Lista categorie -->
   <div>
     <% if (!categories || categories.length === 0) { %>
-      <div class="empty-state"><p>Nessuna categoria. Creane una!</p></div>
+      <%- include('../partials/_empty-state', {
+        icon: 'box',
+        title: 'Nessuna categoria',
+        message: 'Crea la prima categoria dal form a fianco per organizzare il catalogo.'
+      }) %>
     <% } else { %>
       <table class="data-table">
         <thead>
@@ -24,7 +28,10 @@
               <td><%= cat.sortOrder %></td>
               <td><%= cat._count ? cat._count.products : '—' %></td>
               <td>
-                <button class="btn btn-outline btn-sm" onclick="editCategory('<%= cat.id %>', '<%= cat.name.replace(/'/g, "\\'") %>', '<%= cat.sortOrder %>')">
+                <button class="btn btn-outline btn-sm js-edit-cat"
+                        data-id="<%= cat.id %>"
+                        data-name="<%= cat.name %>"
+                        data-sort="<%= cat.sortOrder %>">
                   Modifica
                 </button>
               </td>
@@ -46,6 +53,7 @@
 
     <!-- Form nuova -->
     <form action="/admin/categories" method="POST" id="new-cat-form">
+      <%- include('../partials/_csrf') %>
       <div class="form-group">
         <label>Nome *</label>
         <input type="text" name="name" class="form-control" required placeholder="es. Antincrostanti">
@@ -60,6 +68,7 @@
 
     <!-- Form modifica (nascosta) -->
     <form action="" method="POST" id="edit-cat-form" style="display:none">
+      <%- include('../partials/_csrf') %>
       <div class="form-group">
         <label>Nome *</label>
         <input type="text" name="name" id="edit-name" class="form-control" required>
@@ -70,28 +79,36 @@
       </div>
       <div style="display:flex;gap:0.5rem">
         <button type="submit" class="btn btn-primary">Salva</button>
-        <button type="button" class="btn btn-outline" onclick="cancelEdit()">Annulla</button>
+        <button type="button" class="btn btn-outline js-cancel-edit">Annulla</button>
       </div>
     </form>
   </div>
 </div>
 
-<script>
-function editCategory(id, name, sortOrder) {
-  document.getElementById('form-title-new').style.display = 'none';
-  document.getElementById('form-title-edit').style.display = '';
-  document.getElementById('new-cat-form').style.display = 'none';
-  document.getElementById('edit-cat-form').style.display = '';
-  document.getElementById('edit-cat-form').action = '/admin/categories/' + id;
-  document.getElementById('edit-name').value = name;
-  document.getElementById('edit-sortOrder').value = sortOrder;
-}
-function cancelEdit() {
-  document.getElementById('form-title-new').style.display = '';
-  document.getElementById('form-title-edit').style.display = 'none';
-  document.getElementById('new-cat-form').style.display = '';
-  document.getElementById('edit-cat-form').style.display = 'none';
-}
+<script nonce="<%= cspNonce %>">
+(function(){
+  function editCategory(id, name, sortOrder) {
+    document.getElementById('form-title-new').style.display = 'none';
+    document.getElementById('form-title-edit').style.display = '';
+    document.getElementById('new-cat-form').style.display = 'none';
+    document.getElementById('edit-cat-form').style.display = '';
+    document.getElementById('edit-cat-form').action = '/admin/categories/' + id;
+    document.getElementById('edit-name').value = name;
+    document.getElementById('edit-sortOrder').value = sortOrder;
+  }
+  function cancelEdit() {
+    document.getElementById('form-title-new').style.display = '';
+    document.getElementById('form-title-edit').style.display = 'none';
+    document.getElementById('new-cat-form').style.display = '';
+    document.getElementById('edit-cat-form').style.display = 'none';
+  }
+  document.querySelectorAll('.js-edit-cat').forEach(btn => {
+    btn.addEventListener('click', () => editCategory(btn.dataset.id, btn.dataset.name, btn.dataset.sort));
+  });
+  document.querySelectorAll('.js-cancel-edit').forEach(btn => {
+    btn.addEventListener('click', cancelEdit);
+  });
+})();
 </script>
 
 <%- include('../partials/_admin-footer') %>

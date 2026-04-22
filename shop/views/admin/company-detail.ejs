@@ -74,6 +74,7 @@
   <div class="admin-sidebar-panel">
     <h3>Stato account</h3>
     <form action="/admin/companies/<%= company.id %>/status" method="POST">
+      <%- include('../partials/_csrf') %>
       <div class="form-group">
         <select name="status" class="form-control">
           <% ['PENDING','APPROVED','REJECTED','SUSPENDED'].forEach(s => { %>

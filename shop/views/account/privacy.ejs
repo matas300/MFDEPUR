@@ -1,0 +1,49 @@
+<%- include('../partials/_header', { title: 'I miei dati (GDPR)' }) %>
+
+<div class="container" style="max-width:760px;margin:2rem auto;padding:0 1rem">
+  <nav aria-label="breadcrumb" style="margin-bottom:1rem;font-size:.875rem">
+    <a href="/account">Account</a> / <strong>Privacy e dati</strong>
+  </nav>
+
+  <h1>I miei dati personali</h1>
+  <p style="color:var(--text-muted)">
+    In conformità al Regolamento UE 2016/679 (GDPR) puoi esportare una copia dei tuoi dati
+    o richiederne la cancellazione.
+  </p>
+
+  <% if (typeof error !== 'undefined' && error) { %>
+    <div class="alert alert-danger" role="alert"><%= error %></div>
+  <% } %>
+
+  <section class="card" style="padding:1.5rem;margin-top:1.5rem">
+    <h2>Esporta i miei dati</h2>
+    <p>
+      Scarica un file JSON con i tuoi dati personali, l'azienda associata, gli indirizzi
+      e lo storico ordini. Diritti esercitati: <strong>Art. 15</strong> (accesso) e
+      <strong>Art. 20</strong> (portabilità).
+    </p>
+    <a href="/account/export" class="btn btn-primary">Scarica esportazione (JSON)</a>
+  </section>
+
+  <section class="card" style="padding:1.5rem;margin-top:1.5rem;border-color:var(--danger)">
+    <h2 style="color:var(--danger)">Cancella il mio account</h2>
+    <p>
+      L'azione anonimizza i tuoi dati personali (email, nome, telefono) e impedisce
+      ogni futuro accesso. <strong>Lo storico ordini viene conservato in forma anonima</strong>
+      per i 10 anni previsti dalla normativa fiscale italiana (art. 2220 c.c.).
+      L'azienda associata e gli indirizzi di spedizione non vengono cancellati.
+    </p>
+    <p style="color:var(--danger)"><strong>Operazione irreversibile.</strong></p>
+
+    <form action="/account/delete" method="POST" data-confirm="Sei sicuro di voler cancellare l'account? L'operazione è irreversibile." data-confirm-action="Cancella account">
+      <%- include('../partials/_csrf') %>
+      <div class="form-group" style="max-width:320px">
+        <label for="confirm">Per confermare digita <code>ELIMINA</code></label>
+        <input type="text" id="confirm" name="confirm" class="form-control" autocomplete="off" required pattern="ELIMINA">
+      </div>
+      <button type="submit" class="btn btn-danger">Cancella account</button>
+    </form>
+  </section>
+</div>
+
+<%- include('../partials/_footer') %>

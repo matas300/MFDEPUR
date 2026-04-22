@@ -5,9 +5,33 @@ const helmet = require('helmet');
 const cookieParser = require('cookie-parser');
 const rateLimit = require('express-rate-limit');
 const { injectUser } = require('./middleware/auth');
+const cspNonce = require('./middleware/nonce');
+const {
+  ensureCsrfSession,
+  injectCsrfToken,
+  doubleCsrfProtection,
+  csrfErrorHandler,
+} = require('./middleware/csrf');
 const orderCtrl = require('./controllers/orderController');
 
 const app = express();
+
+const IS_PROD = process.env.NODE_ENV === 'production';
+
+// ── Trust proxy in prod (reverse proxy Nginx/Cloudflare/Hostinger) ────────────
+// Necessario per req.secure, req.ip, cookie Secure e rate limit per-IP.
+if (IS_PROD) {
+  app.set('trust proxy', 1);
+}
+
+// ── Redirect HTTPS in prod ────────────────────────────────────────────────────
+// Applicato PRIMA del webhook Stripe: anche i webhook devono arrivare in HTTPS.
+if (IS_PROD) {
+  app.use((req, res, next) => {
+    if (req.secure || req.headers['x-forwarded-proto'] === 'https') return next();
+    return res.redirect(301, `https://${req.headers.host}${req.originalUrl}`);
+  });
+}
 
 // ── Stripe webhook (deve ricevere rawBody PRIMA di express.json) ──────────────
 app.post('/stripe/webhook',
@@ -17,11 +41,24 @@ app.post('/stripe/webhook',
 );
 
 // ── Middleware ────────────────────────────────────────────────────────────────
+// Nonce per CSP: deve stare PRIMA di helmet così la direttiva scriptSrc può leggerlo
+app.use(cspNonce);
+
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", 'js.stripe.com', 'cdn.jsdelivr.net', 'unpkg.com', 'cdnjs.cloudflare.com'],
+      // scriptSrc: niente 'unsafe-inline'. Gli script inline richiedono nonce="<%= cspNonce %>".
+      scriptSrc: [
+        "'self'",
+        (req, res) => `'nonce-${res.locals.cspNonce}'`,
+        'js.stripe.com',
+        'cdn.jsdelivr.net',
+        'unpkg.com',
+        'cdnjs.cloudflare.com',
+      ],
+      // styleSrc: 'unsafe-inline' ancora presente — molti template hanno style="..." inline.
+      // TODO hardening: refactor degli inline style e passaggio a nonce/hash.
       styleSrc: ["'self'", "'unsafe-inline'", 'fonts.googleapis.com', 'cdnjs.cloudflare.com', 'unpkg.com'],
       fontSrc: ["'self'", 'fonts.gstatic.com', 'cdnjs.cloudflare.com', 'data:'],
       frameSrc: ['js.stripe.com'],
@@ -29,11 +66,22 @@ app.use(helmet({
       connectSrc: ["'self'", 'api.stripe.com'],
     },
   },
+  // HSTS: 1 anno, includeSubDomains, preload. Attivo solo in prod — in dev
+  // disattivato per non "appiccicare" localhost all'HTTPS nei browser.
+  hsts: IS_PROD ? { maxAge: 31536000, includeSubDomains: true, preload: true } : false,
+  // Helmet aggiunge già X-Content-Type-Options, X-Frame-Options, Referrer-Policy.
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
 }));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
+
+// ── CSRF protection (double-submit cookie) ────────────────────────────────────
+// Escluso da /stripe/webhook (montato prima di questo middleware)
+app.use(ensureCsrfSession);
+app.use(doubleCsrfProtection);
+app.use(injectCsrfToken);
 
 // Rate limiting
 app.use('/auth/login', rateLimit({ windowMs: 15 * 60 * 1000, max: 10, message: 'Troppi tentativi, riprova tra 15 minuti.' }));
@@ -75,6 +123,9 @@ app.get('/sitemap.xml', require('./routes/sitemap'));
 app.use((req, res) => {
   res.status(404).render('error', { message: 'Pagina non trovata', code: 404 });
 });
+
+// ── CSRF error handler (prima del generico) ──────────────────────────────────
+app.use(csrfErrorHandler);
 
 // ── Error handler ─────────────────────────────────────────────────────────────
 app.use((err, req, res, next) => {

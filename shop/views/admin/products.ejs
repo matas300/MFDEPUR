@@ -4,7 +4,7 @@
   <form action="/admin/products" method="GET" class="filter-bar">
     <input type="text" name="cerca" class="form-control form-control--sm" placeholder="Cerca prodotto, SKU..."
            value="<%= filters.cerca || '' %>">
-    <select name="categoria" class="form-control form-control--sm" onchange="this.form.submit()">
+    <select name="categoria" class="form-control form-control--sm js-auto-submit">
       <option value="">Tutte le categorie</option>
       <% categories.forEach(c => { %>
         <option value="<%= c.slug %>" <%= (filters.categoria === c.slug) ? 'selected' : '' %>><%= c.name %></option>
@@ -21,10 +21,15 @@
 <% } %>
 
 <% if (!products || products.length === 0) { %>
-  <div class="empty-state">
-    <p>Nessun prodotto trovato.</p>
-    <a href="/admin/products/new" class="btn btn-primary">Crea il primo prodotto</a>
-  </div>
+  <%- include('../partials/_empty-state', {
+    icon: 'products',
+    title: (filters.cerca || filters.categoria) ? 'Nessun prodotto per i filtri' : 'Nessun prodotto ancora',
+    message: (filters.cerca || filters.categoria)
+      ? 'I filtri attivi non hanno prodotto risultati.'
+      : 'Comincia a popolare il catalogo: aggiungi il tuo primo prodotto.',
+    cta: { href: '/admin/products/new', label: 'Crea prodotto' },
+    cta2: (filters.cerca || filters.categoria) ? { href: '/admin/products', label: 'Rimuovi filtri' } : null
+  }) %>
 <% } else { %>
   <table class="data-table">
     <thead>
@@ -66,6 +71,7 @@
           </td>
           <td>
             <form action="/admin/products/<%= p.id %>/toggle" method="POST" style="display:inline" class="toggle-form">
+              <%- include('../partials/_csrf') %>
               <button type="submit" class="toggle-btn <%= p.isActive ? 'toggle-btn--on' : 'toggle-btn--off' %>">
                 <%= p.isActive ? '✓' : '✗' %>
               </button>
@@ -74,7 +80,8 @@
           <td class="table-actions">
             <a href="/admin/products/<%= p.id %>/edit" class="btn btn-outline btn-sm">Modifica</a>
             <form action="/admin/products/<%= p.id %>/delete" method="POST" style="display:inline"
-                  onsubmit="return confirm('Disattivare il prodotto?')">
+                  data-confirm="Disattivare questo prodotto?" data-confirm-action="Disattiva">
+              <%- include('../partials/_csrf') %>
               <button type="submit" class="btn btn-danger-outline btn-sm">Disattiva</button>
             </form>
           </td>
@@ -94,18 +101,20 @@
   <% } %>
 <% } %>
 
-<script>
-// Toggle attivo/disattivo via AJAX
+<script nonce="<%= cspNonce %>">
+// Toggle attivo/disattivo via AJAX (usa apiFetch per includere CSRF token)
 document.querySelectorAll('.toggle-form').forEach(form => {
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const btn = form.querySelector('.toggle-btn');
-    const res = await fetch(form.action, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
-    if (res.ok) {
-      const { isActive } = await res.json();
+    try {
+      const data = await apiFetch(form.action, { method: 'POST' });
+      const isActive = data.isActive;
       btn.textContent = isActive ? '✓' : '✗';
       btn.className = 'toggle-btn ' + (isActive ? 'toggle-btn--on' : 'toggle-btn--off');
       btn.closest('tr').classList.toggle('row--disabled', !isActive);
+    } catch (err) {
+      console.error('toggle failed', err);
     }
   });
 });

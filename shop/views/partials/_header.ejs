@@ -4,6 +4,17 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title><%= typeof title !== 'undefined' ? title + ' — MF Depur Shop' : 'MF Depur Shop' %></title>
+  <meta name="description" content="<%= typeof metaDescription !== 'undefined' ? metaDescription : 'MF Depur — prodotti chimici per il trattamento acque. Catalogo B2B con vendita riservata alle aziende.' %>">
+  <meta name="theme-color" content="#1e3a8a">
+  <meta name="csrf-token" content="<%= typeof csrfToken !== 'undefined' ? csrfToken : '' %>">
+
+  <!-- Open Graph / Twitter -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="MF Depur Shop">
+  <meta property="og:title" content="<%= typeof title !== 'undefined' ? title + ' — MF Depur Shop' : 'MF Depur Shop' %>">
+  <meta property="og:description" content="<%= typeof metaDescription !== 'undefined' ? metaDescription : 'MF Depur — prodotti chimici per il trattamento acque. Catalogo B2B.' %>">
+  <meta property="og:image" content="https://www.mfdepur.com/assets/images/logo_no_bg.png">
+  <meta name="twitter:card" content="summary">
 
   <!-- Font: stesso del sito di vetrina -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -18,6 +29,8 @@
   <%- typeof extraHead !== 'undefined' ? extraHead : '' %>
 </head>
 <body>
+
+<a href="#main-content" class="skip-link">Salta al contenuto</a>
 
 <header id="shop-navbar">
   <div class="shop-nav-inner">
@@ -51,6 +64,7 @@
           <% } %>
         </a>
         <form action="/auth/logout" method="POST" style="display:inline;margin:0">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
           <button type="submit" class="shop-nav-btn-link">
             <i class="fa-solid fa-right-from-bracket"></i> Esci
           </button>
@@ -82,6 +96,7 @@
       <a href="/account" class="shop-mobile-link">Il mio account</a>
       <a href="/shop/cart" class="shop-mobile-link">Carrello<span id="mobileCartCount"><% if (cartCount > 0) { %> (<%= cartCount %>)<% } %></span></a>
       <form action="/auth/logout" method="POST" style="margin:0">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
         <button type="submit" class="shop-mobile-link shop-mobile-logout">Esci</button>
       </form>
     <% } else { %>
@@ -92,9 +107,9 @@
   </div>
 </header>
 
-<main class="shop-main">
+<main id="main-content" class="shop-main" tabindex="-1">
 
-<script>
+<script nonce="<%= cspNonce %>">
   // Config utente per shop.js
   window.SHOP = {
     loggedIn: <%= !!currentUser %>,

@@ -49,29 +49,83 @@ const GuestCart = {
 function updateCartBadge(count) {
   const badges = document.querySelectorAll('#navCartBadge');
   badges.forEach(badge => {
+    const prev = parseInt(badge.textContent, 10) || 0;
     badge.textContent = count;
     badge.style.display = count > 0 ? '' : 'none';
+    // Pulse solo quando il conteggio aumenta
+    if (count > prev) {
+      badge.classList.remove('is-pulsing');
+      // reflow per riavviare l'animazione
+      void badge.offsetWidth;
+      badge.classList.add('is-pulsing');
+    }
   });
   const mobileSpans = document.querySelectorAll('#mobileCartCount');
   mobileSpans.forEach(el => { el.textContent = count > 0 ? ` (${count})` : ''; });
 }
 
 function showToast(message, type = 'success') {
+  const iconPaths = {
+    success: ['polyline', { points: '20 6 9 17 4 12' }],
+    error:   ['path', { d: 'M12 2a10 10 0 100 20 10 10 0 000-20zM9 9l6 6M15 9l-6 6' }],
+    info:    ['path', { d: 'M12 2a10 10 0 100 20 10 10 0 000-20zM12 8h.01M12 12v4' }],
+  };
+  const SVG_NS = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(SVG_NS, 'svg');
+  svg.setAttribute('class', 'toast__icon');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('fill', 'none');
+  svg.setAttribute('stroke', 'currentColor');
+  svg.setAttribute('stroke-width', '2.5');
+  svg.setAttribute('stroke-linecap', 'round');
+  svg.setAttribute('stroke-linejoin', 'round');
+  const [tag, attrs] = iconPaths[type] || iconPaths.info;
+  const shape = document.createElementNS(SVG_NS, tag);
+  Object.entries(attrs).forEach(([k, v]) => shape.setAttribute(k, v));
+  svg.appendChild(shape);
+
+  const msg = document.createElement('span');
+  msg.className = 'toast__msg';
+  msg.textContent = message;
+
+  const closeBtn = document.createElement('button');
+  closeBtn.type = 'button';
+  closeBtn.className = 'toast__close';
+  closeBtn.setAttribute('aria-label', 'Chiudi');
+  closeBtn.textContent = '×';
+
   const toast = document.createElement('div');
   toast.className = `toast toast--${type}`;
-  toast.textContent = message;
+  toast.setAttribute('role', type === 'error' ? 'alert' : 'status');
+  toast.setAttribute('aria-live', type === 'error' ? 'assertive' : 'polite');
+  toast.appendChild(svg);
+  toast.appendChild(msg);
+  toast.appendChild(closeBtn);
   document.body.appendChild(toast);
-  requestAnimationFrame(() => toast.classList.add('toast--visible'));
-  setTimeout(() => {
+
+  const dismiss = () => {
     toast.classList.remove('toast--visible');
     setTimeout(() => toast.remove(), 300);
-  }, 3000);
+  };
+  closeBtn.addEventListener('click', dismiss);
+  requestAnimationFrame(() => toast.classList.add('toast--visible'));
+  setTimeout(dismiss, 4000);
+}
+
+function getCsrfToken() {
+  const el = document.querySelector('meta[name="csrf-token"]');
+  return el ? el.getAttribute('content') : '';
 }
 
 async function apiFetch(url, options = {}) {
+  const headers = {
+    'Content-Type': 'application/json',
+    'x-csrf-token': getCsrfToken(),
+    ...options.headers,
+  };
   const res = await fetch(url, {
-    headers: { 'Content-Type': 'application/json', ...options.headers },
     ...options,
+    headers,
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.error || `Errore ${res.status}`);
@@ -469,3 +523,250 @@ if (addressSelect && newAddressFields) {
     newAddressFields.style.display = 'none';
   }
 }
+
+// ── Loading state automatico per form con [data-loading] ─────────────────────
+document.addEventListener('submit', (e) => {
+  const form = e.target;
+  if (!form.matches('form[data-loading]')) return;
+  const btn = form.querySelector('button[type="submit"], input[type="submit"]');
+  if (!btn || btn.classList.contains('is-loading')) return;
+  btn.classList.add('is-loading');
+  btn.disabled = true;
+  // Safety: se il submit fallisce lato server (es. 422 con redirect),
+  // la pagina ricarica e lo stato si resetta. Se è SPA, rimuoviamo dopo 15s.
+  setTimeout(() => { btn.classList.remove('is-loading'); btn.disabled = false; }, 15000);
+});
+
+// ── Stampa pagina corrente per elementi con [data-print] ─────────────────────
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-print]');
+  if (!btn) return;
+  e.preventDefault();
+  window.print();
+});
+
+// ── Confirm modal ────────────────────────────────────────────────────────────
+// Uso: <form data-confirm="Sei sicuro?" data-confirm-action="Elimina">
+// oppure: <button type="button" data-confirm-click="..." data-confirm-action="...">
+const _confirmState = { resolve: null, overlay: null };
+
+function showConfirm({ message, actionLabel = 'Conferma', cancelLabel = 'Annulla', danger = true }) {
+  return new Promise(resolve => {
+    // Un solo modal alla volta
+    if (_confirmState.overlay) _confirmState.overlay.remove();
+
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-labelledby', 'confirm-modal-msg');
+
+    const dialog = document.createElement('div');
+    dialog.className = 'modal-dialog';
+
+    const msg = document.createElement('p');
+    msg.id = 'confirm-modal-msg';
+    msg.className = 'modal-message';
+    msg.textContent = message;
+
+    const actions = document.createElement('div');
+    actions.className = 'modal-actions';
+
+    const cancelBtn = document.createElement('button');
+    cancelBtn.type = 'button';
+    cancelBtn.className = 'btn btn-outline';
+    cancelBtn.textContent = cancelLabel;
+
+    const okBtn = document.createElement('button');
+    okBtn.type = 'button';
+    okBtn.className = 'btn ' + (danger ? 'btn-danger' : 'btn-primary');
+    okBtn.textContent = actionLabel;
+
+    actions.append(cancelBtn, okBtn);
+    dialog.append(msg, actions);
+    overlay.append(dialog);
+    document.body.append(overlay);
+    document.body.style.overflow = 'hidden';
+
+    const cleanup = (result) => {
+      document.body.style.overflow = '';
+      document.removeEventListener('keydown', onKey);
+      overlay.remove();
+      _confirmState.overlay = null;
+      resolve(result);
+    };
+    const onKey = (ev) => {
+      if (ev.key === 'Escape') cleanup(false);
+      if (ev.key === 'Enter') cleanup(true);
+    };
+    cancelBtn.addEventListener('click', () => cleanup(false));
+    okBtn.addEventListener('click', () => cleanup(true));
+    overlay.addEventListener('click', (ev) => { if (ev.target === overlay) cleanup(false); });
+    document.addEventListener('keydown', onKey);
+
+    _confirmState.overlay = overlay;
+    // Focus inside dialog (sul cancel per default, più sicuro)
+    setTimeout(() => cancelBtn.focus(), 10);
+  });
+}
+window.showConfirm = showConfirm;
+
+document.addEventListener('submit', async (e) => {
+  const form = e.target;
+  if (!(form instanceof HTMLFormElement)) return;
+  const msg = form.getAttribute('data-confirm');
+  if (!msg || form.dataset.confirmed === '1') return;
+  e.preventDefault();
+  const ok = await showConfirm({
+    message: msg,
+    actionLabel: form.getAttribute('data-confirm-action') || 'Conferma',
+    danger: form.getAttribute('data-confirm-danger') !== 'false',
+  });
+  if (ok) {
+    form.dataset.confirmed = '1';
+    if (typeof form.requestSubmit === 'function') form.requestSubmit();
+    else form.submit();
+  }
+}, true);
+
+// ── Inline validation ────────────────────────────────────────────────────────
+// Validatori italiani comuni
+const _validators = {
+  email: v => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v),
+  vatIT: v => /^\d{11}$/.test(v.replace(/\s/g, '').replace(/^IT/i, '')),
+  cap: v => /^\d{5}$/.test(v.trim()),
+  phone: v => /^[+]?[\d\s().-]{6,20}$/.test(v.trim()),
+};
+
+function _validateField(el) {
+  const type = el.getAttribute('data-validate');
+  if (!type) return true;
+  const v = el.value || '';
+  // Campo vuoto: validazione solo se required
+  if (!v) {
+    if (el.required) {
+      _setFieldError(el, 'Campo obbligatorio');
+      return false;
+    }
+    _clearFieldError(el);
+    return true;
+  }
+  const fn = _validators[type];
+  if (fn && !fn(v)) {
+    const msgs = {
+      email: 'Inserisci un indirizzo email valido',
+      vatIT: 'La Partita IVA italiana deve avere 11 cifre',
+      cap: 'Il CAP deve essere di 5 cifre',
+      phone: 'Numero di telefono non valido',
+    };
+    _setFieldError(el, msgs[type] || 'Valore non valido');
+    return false;
+  }
+  _clearFieldError(el);
+  return true;
+}
+
+function _setFieldError(el, msg) {
+  el.classList.add('is-invalid');
+  el.setAttribute('aria-invalid', 'true');
+  let err = el.parentElement && el.parentElement.querySelector('.field-error');
+  if (!err) {
+    err = document.createElement('small');
+    err.className = 'field-error';
+    err.setAttribute('role', 'alert');
+    (el.parentElement || el).appendChild(err);
+  }
+  err.textContent = msg;
+}
+
+function _clearFieldError(el) {
+  el.classList.remove('is-invalid');
+  el.removeAttribute('aria-invalid');
+  const err = el.parentElement && el.parentElement.querySelector('.field-error');
+  if (err) err.remove();
+}
+
+document.addEventListener('blur', (e) => {
+  const el = e.target;
+  if (el && el.matches && el.matches('[data-validate]')) _validateField(el);
+}, true);
+
+document.addEventListener('input', (e) => {
+  const el = e.target;
+  if (el && el.matches && el.matches('[data-validate].is-invalid')) _validateField(el);
+}, true);
+
+document.addEventListener('submit', (e) => {
+  const form = e.target;
+  if (!(form instanceof HTMLFormElement)) return;
+  const fields = form.querySelectorAll('[data-validate]');
+  if (!fields.length) return;
+  let allValid = true;
+  fields.forEach(f => { if (!_validateField(f)) allValid = false; });
+  if (!allValid) {
+    e.preventDefault();
+    const firstInvalid = form.querySelector('[data-validate].is-invalid');
+    if (firstInvalid) firstInvalid.focus();
+  }
+}, true);
+
+// ── Back to top ──────────────────────────────────────────────────────────────
+(() => {
+  if (document.getElementById('back-to-top')) return;
+  const btn = document.createElement('button');
+  btn.id = 'back-to-top';
+  btn.type = 'button';
+  btn.setAttribute('aria-label', 'Torna su');
+  btn.className = 'back-to-top';
+  btn.innerHTML = ''; // niente innerHTML di input, costruiamo via DOM
+  const svgNS = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(svgNS, 'svg');
+  svg.setAttribute('width', '20'); svg.setAttribute('height', '20');
+  svg.setAttribute('viewBox', '0 0 24 24'); svg.setAttribute('fill', 'none');
+  svg.setAttribute('stroke', 'currentColor'); svg.setAttribute('stroke-width', '2.5');
+  svg.setAttribute('stroke-linecap', 'round'); svg.setAttribute('stroke-linejoin', 'round');
+  svg.setAttribute('aria-hidden', 'true');
+  const path = document.createElementNS(svgNS, 'polyline');
+  path.setAttribute('points', '18 15 12 9 6 15');
+  svg.appendChild(path);
+  btn.appendChild(svg);
+  document.body.appendChild(btn);
+
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  btn.addEventListener('click', () => {
+    window.scrollTo({ top: 0, behavior: reduce ? 'auto' : 'smooth' });
+  });
+
+  const onScroll = () => {
+    btn.classList.toggle('is-visible', window.scrollY > 400);
+  };
+  let ticking = false;
+  window.addEventListener('scroll', () => {
+    if (!ticking) {
+      requestAnimationFrame(() => { onScroll(); ticking = false; });
+      ticking = true;
+    }
+  }, { passive: true });
+  onScroll();
+})();
+
+// ── Delegated handlers per sostituire inline JS (CSP nonce) ────────────────────
+(function initCspSafeHandlers() {
+  // Select/input con classe js-auto-submit → submit automatico del form contenitore
+  document.querySelectorAll('.js-auto-submit').forEach(el => {
+    el.addEventListener('change', () => { if (el.form) el.form.submit(); });
+  });
+
+  // <img class="js-hide-on-error"> nasconde l'elemento se il caricamento fallisce
+  document.querySelectorAll('img.js-hide-on-error').forEach(img => {
+    img.addEventListener('error', () => { img.style.display = 'none'; });
+  });
+
+  // Gallery thumbnails: click cambia l'immagine principale
+  document.querySelectorAll('.js-product-thumb').forEach(thumb => {
+    thumb.addEventListener('click', () => {
+      const main = document.querySelector('.product-main-image');
+      if (main) main.src = thumb.src;
+    });
+  });
+})();

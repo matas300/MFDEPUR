@@ -10,6 +10,7 @@
   <div class="card">
     <h3>Dati personali</h3>
     <form action="/account/profile" method="POST">
+      <%- include('../partials/_csrf') %>
       <div class="form-row">
         <div class="form-group">
           <label for="firstName">Nome</label>

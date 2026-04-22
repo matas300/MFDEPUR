@@ -1,14 +1,38 @@
 <%- include('../partials/_header', { title: 'Carrello' }) %>
 
 <div class="container">
+  <nav class="breadcrumb" aria-label="breadcrumb">
+    <a href="/shop">Catalogo</a>
+    <span>/</span>
+    <span>Carrello</span>
+  </nav>
+
   <h1 class="page-title">Il tuo carrello</h1>
 
   <%# ── Guest: carrello localStorage, renderizzato da shop.js ──────── %>
   <% if (guest) { %>
-    <div id="guest-cart-container">
-      <div style="text-align:center;padding:3rem 0;color:var(--text-muted)">
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom:.75rem;opacity:.4"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/></svg>
-        <p>Caricamento carrello...</p>
+    <div id="guest-cart-container" aria-busy="true" aria-label="Caricamento carrello">
+      <div class="cart-layout" style="margin-top:1rem">
+        <div>
+          <% for (let i = 0; i < 2; i++) { %>
+            <div class="skeleton-cart-row" style="display:flex;gap:1rem;padding:1rem;border:1px solid var(--border);border-radius:var(--r-sm);margin-bottom:.75rem;background:var(--card)">
+              <div class="skeleton skeleton-box" style="width:72px;height:72px;flex-shrink:0"></div>
+              <div style="flex:1">
+                <div class="skeleton skeleton-line skeleton-line--lg" style="width:60%"></div>
+                <div class="skeleton skeleton-line skeleton-line--sm" style="width:30%"></div>
+                <div class="skeleton skeleton-line" style="width:40%"></div>
+              </div>
+            </div>
+          <% } %>
+        </div>
+        <aside>
+          <div style="padding:1.25rem;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--card)">
+            <div class="skeleton skeleton-line skeleton-line--lg" style="width:50%"></div>
+            <div class="skeleton skeleton-line" style="width:80%"></div>
+            <div class="skeleton skeleton-line" style="width:70%"></div>
+            <div class="skeleton skeleton-line skeleton-line--lg" style="width:90%;margin-top:1rem"></div>
+          </div>
+        </aside>
       </div>
     </div>
 
@@ -24,11 +48,12 @@
 
   <%# ── Utente approvato: carrello DB ──────────────────────────────── %>
   <% } else if (!cart || cart.items.length === 0) { %>
-    <div class="empty-state">
-      <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" style="opacity:0.3;margin-bottom:1rem"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
-      <p>Il carrello è vuoto.</p>
-      <a href="/shop" class="btn btn-primary">Vai al catalogo</a>
-    </div>
+    <%- include('../partials/_empty-state', {
+      icon: 'cart',
+      title: 'Il tuo carrello è vuoto',
+      message: 'Aggiungi prodotti dal catalogo per procedere con un ordine.',
+      cta: { href: '/shop', label: 'Vai al catalogo' }
+    }) %>
   <% } else { %>
     <div class="cart-layout">
       <!-- Tabella prodotti -->
@@ -80,7 +105,8 @@
 
         <div class="cart-actions">
           <a href="/shop" class="btn btn-outline">← Continua gli acquisti</a>
-          <form action="/shop/cart/clear" method="POST" onsubmit="return confirm('Svuotare il carrello?')">
+          <form action="/shop/cart/clear" method="POST" data-confirm="Svuotare il carrello? Tutti i prodotti verranno rimossi." data-confirm-action="Svuota">
+            <%- include('../partials/_csrf') %>
             <button type="submit" class="btn btn-danger-outline">Svuota carrello</button>
           </form>
         </div>

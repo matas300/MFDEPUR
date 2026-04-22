@@ -1,7 +1,16 @@
 <%- include('../partials/_admin-header', { title: title }) %>
 
-<div class="admin-back">
+<div class="admin-back" style="display:flex;gap:.5rem;flex-wrap:wrap">
   <a href="/admin/orders" class="btn btn-outline btn-sm">← Tutti gli ordini</a>
+  <button type="button" class="btn btn-outline btn-sm" data-print>
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:text-bottom"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+    Stampa
+  </button>
+</div>
+
+<div class="print-header">
+  <strong>MF Depur</strong> — Ordine <%= order.orderNumber %> — copia amministrazione<br>
+  <small><%= new Date(order.createdAt).toLocaleString('it-IT') %></small>
 </div>
 
 <div class="order-detail-grid">
@@ -16,6 +25,8 @@
       </div>
       <span class="order-status order-status--<%= order.status.toLowerCase() %>"><%= order.status %></span>
     </div>
+
+    <%- include('../partials/_order-stepper', { order }) %>
 
     <table class="order-items-table">
       <thead>
@@ -90,6 +101,7 @@
   <div class="admin-sidebar-panel">
     <h3>Aggiorna stato</h3>
     <form action="/admin/orders/<%= order.id %>/status" method="POST">
+      <%- include('../partials/_csrf') %>
       <div class="form-group">
         <select name="status" class="form-control">
           <% ['PENDING','CONFIRMED','PROCESSING','SHIPPED','DELIVERED','CANCELLED','REFUNDED'].forEach(s => { %>
@@ -104,33 +116,6 @@
       <button type="submit" class="btn btn-primary btn-block">Aggiorna stato</button>
     </form>
 
-    <div style="margin-top:2rem">
-      <h4>Timeline</h4>
-      <div class="order-timeline">
-        <div class="timeline-item <%= order.status !== 'PAYMENT_FAILED' ? 'done' : 'failed' %>">
-          <span>Ordine creato</span>
-          <small><%= new Date(order.createdAt).toLocaleDateString('it-IT') %></small>
-        </div>
-        <% if (order.paidAt) { %>
-          <div class="timeline-item done">
-            <span>Pagamento ricevuto</span>
-            <small><%= new Date(order.paidAt).toLocaleDateString('it-IT') %></small>
-          </div>
-        <% } %>
-        <% if (order.shippedAt) { %>
-          <div class="timeline-item done">
-            <span>Spedito</span>
-            <small><%= new Date(order.shippedAt).toLocaleDateString('it-IT') %></small>
-          </div>
-        <% } %>
-        <% if (order.deliveredAt) { %>
-          <div class="timeline-item done">
-            <span>Consegnato</span>
-            <small><%= new Date(order.deliveredAt).toLocaleDateString('it-IT') %></small>
-          </div>
-        <% } %>
-      </div>
-    </div>
   </div>
 </div>
 

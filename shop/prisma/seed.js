@@ -1,8 +1,7 @@
-const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcryptjs');
 require('dotenv').config();
 
-const prisma = new PrismaClient();
+const prisma = require('../src/config/database');
 
 async function main() {
   console.log('🌱 Seeding database...');
@@ -422,6 +421,301 @@ async function main() {
       console.log(`✅ Azienda mock creata: ${mock.company.name} (${mock.company.status})`);
     } else {
       console.log(`ℹ️  Azienda mock già esistente: ${mock.company.name}`);
+    }
+  }
+
+  // ── Indirizzi di spedizione ───────────────────────────────────────────────
+  const acquatech = await prisma.company.findUnique({ where: { vatNumber: 'IT09876543210' } });
+  const marioUser = await prisma.user.findUnique({ where: { email: 'mario.rossi@acquatech.it' } });
+
+  if (acquatech && marioUser) {
+    const existingOrders = await prisma.order.count({ where: { companyId: acquatech.id } });
+    if (existingOrders === 0) {
+      // Crea indirizzo di spedizione
+      const address = await prisma.address.upsert({
+        where: { id: 'addr-acquatech-sede' },
+        update: {},
+        create: {
+          id: 'addr-acquatech-sede',
+          companyId: acquatech.id,
+          label: 'Sede operativa',
+          street: 'Via dell\'Industria 42',
+          city: 'Brescia',
+          province: 'BS',
+          postalCode: '25121',
+          country: 'IT',
+          isDefault: true,
+        },
+      });
+
+      const addressMagazzino = await prisma.address.upsert({
+        where: { id: 'addr-acquatech-magazzino' },
+        update: {},
+        create: {
+          id: 'addr-acquatech-magazzino',
+          companyId: acquatech.id,
+          label: 'Magazzino',
+          street: 'Via Logistica 8',
+          city: 'Bergamo',
+          province: 'BG',
+          postalCode: '24122',
+          country: 'IT',
+          isDefault: false,
+        },
+      });
+
+      // Recupera prodotti per gli ordini
+      const prodC200 = await prisma.product.findUnique({ where: { sku: 'MF-C200' } });
+      const prodA150 = await prisma.product.findUnique({ where: { sku: 'MF-A150' } });
+      const prodV100 = await prisma.product.findUnique({ where: { sku: 'MF-V100' } });
+      const prodR100 = await prisma.product.findUnique({ where: { sku: 'MF-R100' } });
+      const prodM100 = await prisma.product.findUnique({ where: { sku: 'MF-M100' } });
+      const prodM200 = await prisma.product.findUnique({ where: { sku: 'MF-M200' } });
+      const prodM300 = await prisma.product.findUnique({ where: { sku: 'MF-M300' } });
+      const prodFEC30 = await prisma.product.findUnique({ where: { sku: 'MF-FEC30' } });
+      const prodR210 = await prisma.product.findUnique({ where: { sku: 'MF-R210' } });
+
+      // ── Ordine 1: DELIVERED (consegnato 2 settimane fa) ─────────────────────
+      const order1Subtotal = (3.50 * 100) + (3.20 * 75); // 350 + 240 = 590
+      const order1Tax = +(order1Subtotal * 0.22).toFixed(2);
+      const order1Total = +(order1Subtotal + order1Tax).toFixed(2);
+
+      await prisma.order.create({
+        data: {
+          orderNumber: 'ORD-2026-0001',
+          userId: marioUser.id,
+          companyId: acquatech.id,
+          addressId: address.id,
+          status: 'DELIVERED',
+          paymentMethod: 'BANK_TRANSFER',
+          subtotal: order1Subtotal,
+          taxRate: 0.22,
+          taxAmount: order1Tax,
+          shippingCost: 0,
+          total: order1Total,
+          notes: 'Consegna al piano terra, ingresso merci.',
+          paidAt: new Date('2026-02-28T10:00:00Z'),
+          shippedAt: new Date('2026-03-01T14:00:00Z'),
+          deliveredAt: new Date('2026-03-03T09:30:00Z'),
+          createdAt: new Date('2026-02-27T08:15:00Z'),
+          items: {
+            create: [
+              {
+                productId: prodC200.id,
+                productName: prodC200.name,
+                productSku: prodC200.sku,
+                unit: prodC200.unit,
+                quantity: 100,
+                unitPrice: 3.50,
+                total: 350,
+              },
+              {
+                productId: prodA150.id,
+                productName: prodA150.name,
+                productSku: prodA150.sku,
+                unit: prodA150.unit,
+                quantity: 75,
+                unitPrice: 3.20,
+                total: 240,
+              },
+            ],
+          },
+        },
+      });
+      console.log('✅ Ordine ORD-2026-0001 (DELIVERED)');
+
+      // ── Ordine 2: SHIPPED (spedito, in transito) ────────────────────────────
+      const order2Subtotal = (4.90 * 200) + (5.20 * 100); // 980 + 520 = 1500
+      const order2Tax = +(order2Subtotal * 0.22).toFixed(2);
+      const order2Total = +(order2Subtotal + order2Tax).toFixed(2);
+
+      await prisma.order.create({
+        data: {
+          orderNumber: 'ORD-2026-0002',
+          userId: marioUser.id,
+          companyId: acquatech.id,
+          addressId: addressMagazzino.id,
+          status: 'SHIPPED',
+          paymentMethod: 'STRIPE',
+          paymentIntentId: 'pi_mock_abc123def456',
+          subtotal: order2Subtotal,
+          taxRate: 0.22,
+          taxAmount: order2Tax,
+          shippingCost: 45,
+          total: +(order2Total + 45).toFixed(2),
+          notes: 'Consegna al magazzino di Bergamo. Chiamare prima della consegna.',
+          trackingNumber: 'BRT-1234567890',
+          paidAt: new Date('2026-03-10T11:30:00Z'),
+          shippedAt: new Date('2026-03-12T08:00:00Z'),
+          createdAt: new Date('2026-03-10T11:25:00Z'),
+          items: {
+            create: [
+              {
+                productId: prodV100.id,
+                productName: prodV100.name,
+                productSku: prodV100.sku,
+                unit: prodV100.unit,
+                quantity: 200,
+                unitPrice: 4.90,
+                total: 980,
+              },
+              {
+                productId: prodR100.id,
+                productName: prodR100.name,
+                productSku: prodR100.sku,
+                unit: prodR100.unit,
+                quantity: 100,
+                unitPrice: 5.20,
+                total: 520,
+              },
+            ],
+          },
+        },
+      });
+      console.log('✅ Ordine ORD-2026-0002 (SHIPPED)');
+
+      // ── Ordine 3: CONFIRMED (pagato, in lavorazione) ────────────────────────
+      const order3Subtotal = (9.60 * 50) + (7.30 * 50) + (6.80 * 50); // 480 + 365 + 340 = 1185
+      const order3Tax = +(order3Subtotal * 0.22).toFixed(2);
+      const order3Total = +(order3Subtotal + order3Tax).toFixed(2);
+
+      await prisma.order.create({
+        data: {
+          orderNumber: 'ORD-2026-0003',
+          userId: marioUser.id,
+          companyId: acquatech.id,
+          addressId: address.id,
+          status: 'CONFIRMED',
+          paymentMethod: 'BANK_TRANSFER',
+          subtotal: order3Subtotal,
+          taxRate: 0.22,
+          taxAmount: order3Tax,
+          shippingCost: 0,
+          total: order3Total,
+          adminNotes: 'Bonifico ricevuto e verificato. Preparare per spedizione.',
+          paidAt: new Date('2026-03-16T09:00:00Z'),
+          createdAt: new Date('2026-03-14T16:45:00Z'),
+          items: {
+            create: [
+              {
+                productId: prodM100.id,
+                productName: prodM100.name,
+                productSku: prodM100.sku,
+                unit: prodM100.unit,
+                quantity: 50,
+                unitPrice: 9.60,
+                total: 480,
+              },
+              {
+                productId: prodM200.id,
+                productName: prodM200.name,
+                productSku: prodM200.sku,
+                unit: prodM200.unit,
+                quantity: 50,
+                unitPrice: 7.30,
+                total: 365,
+              },
+              {
+                productId: prodM300.id,
+                productName: prodM300.name,
+                productSku: prodM300.sku,
+                unit: 'kg',
+                quantity: 50,
+                unitPrice: 6.80,
+                total: 340,
+              },
+            ],
+          },
+        },
+      });
+      console.log('✅ Ordine ORD-2026-0003 (CONFIRMED)');
+
+      // ── Ordine 4: PENDING (appena effettuato, in attesa di pagamento) ───────
+      const order4Subtotal = (0.42 * 2000) + (11.40 * 50); // 840 + 570 = 1410
+      const order4Tax = +(order4Subtotal * 0.22).toFixed(2);
+      const order4Total = +(order4Subtotal + order4Tax).toFixed(2);
+
+      await prisma.order.create({
+        data: {
+          orderNumber: 'ORD-2026-0004',
+          userId: marioUser.id,
+          companyId: acquatech.id,
+          addressId: address.id,
+          status: 'PENDING',
+          paymentMethod: 'BANK_TRANSFER',
+          subtotal: order4Subtotal,
+          taxRate: 0.22,
+          taxAmount: order4Tax,
+          shippingCost: 0,
+          total: order4Total,
+          notes: 'Urgente, serve per impianto in avviamento.',
+          createdAt: new Date('2026-03-18T14:20:00Z'),
+          items: {
+            create: [
+              {
+                productId: prodFEC30.id,
+                productName: prodFEC30.name,
+                productSku: prodFEC30.sku,
+                unit: prodFEC30.unit,
+                quantity: 2000,
+                unitPrice: 0.42,
+                total: 840,
+              },
+              {
+                productId: prodR210.id,
+                productName: prodR210.name,
+                productSku: prodR210.sku,
+                unit: prodR210.unit,
+                quantity: 50,
+                unitPrice: 11.40,
+                total: 570,
+              },
+            ],
+          },
+        },
+      });
+      console.log('✅ Ordine ORD-2026-0004 (PENDING)');
+
+      // ── Ordine 5: CANCELLED (annullato dal cliente) ─────────────────────────
+      const order5Subtotal = (3.50 * 50);
+      const order5Tax = +(order5Subtotal * 0.22).toFixed(2);
+      const order5Total = +(order5Subtotal + order5Tax).toFixed(2);
+
+      await prisma.order.create({
+        data: {
+          orderNumber: 'ORD-2026-0005',
+          userId: marioUser.id,
+          companyId: acquatech.id,
+          addressId: address.id,
+          status: 'CANCELLED',
+          paymentMethod: 'STRIPE',
+          subtotal: order5Subtotal,
+          taxRate: 0.22,
+          taxAmount: order5Tax,
+          shippingCost: 0,
+          total: order5Total,
+          notes: 'Annullato: ordine duplicato per errore.',
+          createdAt: new Date('2026-03-05T10:00:00Z'),
+          items: {
+            create: [
+              {
+                productId: prodC200.id,
+                productName: prodC200.name,
+                productSku: prodC200.sku,
+                unit: prodC200.unit,
+                quantity: 50,
+                unitPrice: 3.50,
+                total: 175,
+              },
+            ],
+          },
+        },
+      });
+      console.log('✅ Ordine ORD-2026-0005 (CANCELLED)');
+
+      console.log('✅ 5 ordini simulati creati con successo');
+    } else {
+      console.log(`ℹ️  Ordini già esistenti per Acquatech (${existingOrders}), skip`);
     }
   }
 

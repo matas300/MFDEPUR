@@ -1,14 +1,29 @@
 const prisma = require('../config/database');
 const path = require('path');
 const fs = require('fs');
+const { logAudit } = require('../utils/audit');
 
 // ── Shop pubblico ─────────────────────────────────────────────────────────────
 
+// Normalizza qualsiasi valore di query in stringa sicura (primo elemento se array)
+function qStr(v) {
+  if (v == null) return '';
+  if (Array.isArray(v)) v = v[0];
+  if (typeof v !== 'string') return '';
+  return v.slice(0, 200); // cap lunghezza per evitare payload giganti
+}
+
 // GET /shop  — catalogo con filtri
 exports.getCatalog = async (req, res) => {
-  const { categoria, cerca, pagina = 1 } = req.query;
+  const categoria = qStr(req.query.categoria);
+  const cerca = qStr(req.query.cerca);
+  const pmin = qStr(req.query.pmin);
+  const pmax = qStr(req.query.pmax);
+  const ordina = qStr(req.query.ordina);
+  const paginaRaw = qStr(req.query.pagina) || '1';
   const PER_PAGE = 12;
-  const skip = (parseInt(pagina) - 1) * PER_PAGE;
+  const paginaNum = Math.max(parseInt(paginaRaw, 10) || 1, 1);
+  const skip = (paginaNum - 1) * PER_PAGE;
 
   const where = { isActive: true };
 
@@ -19,17 +34,34 @@ exports.getCatalog = async (req, res) => {
 
   if (cerca) {
     where.OR = [
-      { name: { contains: cerca, mode: 'insensitive' } },
-      { shortDesc: { contains: cerca, mode: 'insensitive' } },
-      { sku: { contains: cerca, mode: 'insensitive' } },
+      { name: { contains: cerca } },
+      { shortDesc: { contains: cerca } },
+      { sku: { contains: cerca } },
     ];
   }
+
+  const priceFilter = {};
+  const pminN = parseFloat(pmin);
+  const pmaxN = parseFloat(pmax);
+  if (Number.isFinite(pminN) && pminN >= 0) priceFilter.gte = pminN;
+  if (Number.isFinite(pmaxN) && pmaxN >= 0) priceFilter.lte = pmaxN;
+  if (Object.keys(priceFilter).length) {
+    where.AND = [{ price: priceFilter }, { priceOnRequest: false }];
+  }
+
+  const sortOptions = {
+    'price-asc':  [{ priceOnRequest: 'asc' }, { price: 'asc' }],
+    'price-desc': [{ priceOnRequest: 'asc' }, { price: 'desc' }],
+    'name-asc':   [{ name: 'asc' }],
+    'newest':     [{ isFeatured: 'desc' }, { createdAt: 'desc' }],
+  };
+  const orderBy = sortOptions[ordina] || sortOptions.newest;
 
   const [products, total, categories] = await Promise.all([
     prisma.product.findMany({
       where,
       include: { category: true },
-      orderBy: [{ isFeatured: 'desc' }, { createdAt: 'desc' }],
+      orderBy,
       skip,
       take: PER_PAGE,
     }),
@@ -41,11 +73,11 @@ exports.getCatalog = async (req, res) => {
     products,
     categories,
     pagination: {
-      current: parseInt(pagina),
+      current: paginaNum,
       total: Math.ceil(total / PER_PAGE),
       totalItems: total,
     },
-    filters: { categoria, cerca },
+    filters: { categoria, cerca, pmin, pmax, ordina: ordina || 'newest' },
     title: 'Catalogo prodotti',
   });
 };
@@ -74,15 +106,18 @@ exports.getProduct = async (req, res) => {
 
 // GET /admin/products
 exports.adminList = async (req, res) => {
-  const { cerca, categoria, pagina = 1 } = req.query;
+  const cerca = qStr(req.query.cerca);
+  const categoria = qStr(req.query.categoria);
+  const paginaRaw = qStr(req.query.pagina) || '1';
   const PER_PAGE = 20;
-  const skip = (parseInt(pagina) - 1) * PER_PAGE;
+  const paginaNum = Math.max(parseInt(paginaRaw, 10) || 1, 1);
+  const skip = (paginaNum - 1) * PER_PAGE;
   const where = {};
 
   if (cerca) {
     where.OR = [
-      { name: { contains: cerca, mode: 'insensitive' } },
-      { sku: { contains: cerca, mode: 'insensitive' } },
+      { name: { contains: cerca } },
+      { sku: { contains: cerca } },
     ];
   }
   if (categoria) where.categoryId = categoria;
@@ -101,7 +136,7 @@ exports.adminList = async (req, res) => {
 
   res.render('admin/products', {
     products, categories,
-    pagination: { current: parseInt(pagina), total: Math.ceil(total / PER_PAGE) },
+    pagination: { current: paginaNum, total: Math.ceil(total / PER_PAGE) },
     filters: { cerca, categoria },
     title: 'Gestione prodotti',
   });
@@ -137,7 +172,8 @@ exports.adminCreate = async (req, res) => {
   }
   data.slug = slug;
 
-  await prisma.product.create({ data });
+  const created = await prisma.product.create({ data });
+  logAudit(req, { action: 'PRODUCT_CREATE', entityType: 'Product', entityId: created.id, metadata: { name: created.name, sku: created.sku } });
   res.redirect('/admin/products?success=1');
 };
 
@@ -147,6 +183,7 @@ exports.adminUpdate = async (req, res) => {
   delete data.slug; // lo slug non cambia dopo la creazione
 
   await prisma.product.update({ where: { id: req.params.id }, data });
+  logAudit(req, { action: 'PRODUCT_UPDATE', entityType: 'Product', entityId: req.params.id, metadata: { name: data.name, priceOnRequest: data.priceOnRequest, isActive: data.isActive } });
   res.redirect(`/admin/products/${req.params.id}/edit?success=1`);
 };
 
@@ -156,6 +193,7 @@ exports.adminDelete = async (req, res) => {
     where: { id: req.params.id },
     data: { isActive: false },
   });
+  logAudit(req, { action: 'PRODUCT_DELETE', entityType: 'Product', entityId: req.params.id });
   res.redirect('/admin/products?deleted=1');
 };
 
