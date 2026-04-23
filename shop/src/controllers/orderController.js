@@ -49,6 +49,20 @@ exports.postCheckout = async (req, res) => {
 
   if (!cart || cart.items.length === 0) return res.redirect('/shop/cart');
 
+  // Ownership check: l'indirizzo deve appartenere alla company dell'utente (IDOR fix)
+  if (addressId) {
+    const addr = await prisma.address.findFirst({
+      where: { id: addressId, companyId: req.user.companyId },
+      select: { id: true },
+    });
+    if (!addr) {
+      return res.status(403).render('error', {
+        message: 'Indirizzo non valido o non autorizzato.',
+        code: 403,
+      });
+    }
+  }
+
   // Verifica stock
   for (const item of cart.items) {
     if (item.product.stock < item.quantity) {
