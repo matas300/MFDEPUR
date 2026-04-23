@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@prisma/client": "^5.10.0",
+    "@sentry/node": "^8.55.1",
     "bcryptjs": "^2.4.3",
     "cookie-parser": "^1.4.6",
     "csrf-csrf": "^4.0.3",

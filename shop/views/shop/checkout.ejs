@@ -22,6 +22,7 @@
     <!-- Form -->
     <div class="checkout-form">
       <form id="checkout-form">
+        <input type="hidden" name="idempotencyKey" value="<%= typeof idempotencyKey !== 'undefined' ? idempotencyKey : '' %>">
 
         <!-- Indirizzo di spedizione -->
         <div class="checkout-section">

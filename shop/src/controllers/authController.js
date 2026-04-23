@@ -4,6 +4,7 @@ const crypto = require('crypto');
 const { validationResult } = require('express-validator');
 const prisma = require('../config/database');
 const email = require('../utils/email');
+const { logEmailFailure } = require('../utils/emailLogger');
 
 function generateAccessToken(userId) {
   return jwt.sign({ userId }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN || '15m' });
@@ -147,7 +148,7 @@ exports.verifyEmail = async (req, res) => {
 exports.logout = async (req, res) => {
   const refreshToken = req.cookies?.refreshToken;
   if (refreshToken) {
-    await prisma.session.deleteMany({ where: { refreshToken } }).catch(() => {});
+    await prisma.session.deleteMany({ where: { refreshToken } }).catch(() => {}); // idempotent cleanup, silenzioso OK
   }
   res.clearCookie('accessToken', { path: '/' });
   res.clearCookie('refreshToken', { path: '/auth/refresh' });
@@ -195,7 +196,13 @@ exports.postForgot = async (req, res) => {
       data: { resetPasswordToken: token, resetPasswordExpires: expires },
     });
     const resetUrl = `${process.env.BASE_URL}/auth/reset-password?token=${token}`;
-    await email.sendPasswordReset(user, resetUrl).catch(() => {});
+    await email.sendPasswordReset(user, resetUrl).catch((err) => logEmailFailure({
+      to: user.email,
+      subject: 'Reset password',
+      templateName: 'sendPasswordReset',
+      err,
+      context: { userId: user.id },
+    }));
   }
 
   res.render('auth/forgot-password', { sent: true, error: null });

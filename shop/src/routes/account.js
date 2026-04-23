@@ -7,6 +7,7 @@ const orderCtrl = require('../controllers/orderController');
 const prisma = require('../config/database');
 const { MAX_LEN } = require('../config/constants');
 const { logAudit } = require('../utils/audit');
+const asyncHandler = require('../utils/asyncHandler');
 
 const deleteAccountLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 ora
@@ -21,8 +22,8 @@ router.use(requireAuth);
 router.get('/', (req, res) => res.render('account/dashboard', { title: 'Il mio account' }));
 
 // Ordini
-router.get('/orders', requireApprovedCompany, orderCtrl.getMyOrders);
-router.get('/orders/:id', requireApprovedCompany, orderCtrl.getOrderDetail);
+router.get('/orders', requireApprovedCompany, asyncHandler(orderCtrl.getMyOrders));
+router.get('/orders/:id', requireApprovedCompany, asyncHandler(orderCtrl.getOrderDetail));
 
 // Profilo
 router.get('/profile', (req, res) => res.render('account/profile', { title: 'Profilo', success: req.query.success }));
@@ -36,7 +37,7 @@ router.post('/profile',
     body('phone').optional({ checkFalsy: true }).trim().isLength({ max: MAX_LEN.phone })
       .withMessage(`Telefono troppo lungo (max ${MAX_LEN.phone} caratteri)`),
   ],
-  async (req, res) => {
+  asyncHandler(async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(422).render('account/profile', {
@@ -54,17 +55,17 @@ router.post('/profile',
       },
     });
     res.redirect('/account/profile?success=1');
-  }
+  })
 );
 
 // Indirizzi
-router.get('/addresses', async (req, res) => {
+router.get('/addresses', asyncHandler(async (req, res) => {
   const addresses = await prisma.address.findMany({
     where: { companyId: req.user.companyId },
     orderBy: { isDefault: 'desc' },
   });
   res.render('account/addresses', { addresses, title: 'Indirizzi di spedizione' });
-});
+}));
 
 router.post('/addresses',
   [
@@ -80,7 +81,7 @@ router.post('/addresses',
     body('country').optional({ checkFalsy: true }).trim().isLength({ min: 2, max: 2 }).isAlpha()
       .withMessage('Country code ISO-2 (es. IT)'),
   ],
-  async (req, res) => {
+  asyncHandler(async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       const addresses = await prisma.address.findMany({
@@ -118,15 +119,15 @@ router.post('/addresses',
       });
     });
     res.redirect('/account/addresses?success=1');
-  }
+  })
 );
 
-router.post('/addresses/:id/delete', async (req, res) => {
+router.post('/addresses/:id/delete', asyncHandler(async (req, res) => {
   await prisma.address.deleteMany({
     where: { id: req.params.id, companyId: req.user.companyId },
   });
   res.redirect('/account/addresses');
-});
+}));
 
 // ── GDPR: pagina privacy account ──────────────────────────────────────────────
 router.get('/privacy', (req, res) => {
@@ -135,7 +136,7 @@ router.get('/privacy', (req, res) => {
 
 // ── GDPR: export dati personali (Art. 15 / 20 GDPR) ───────────────────────────
 // Restituisce un JSON scaricabile con tutti i dati personali dell'utente.
-router.get('/export', async (req, res) => {
+router.get('/export', asyncHandler(async (req, res) => {
   const user = await prisma.user.findUnique({
     where: { id: req.user.id },
     include: {
@@ -171,12 +172,12 @@ router.get('/export', async (req, res) => {
   res.setHeader('Content-Disposition', `attachment; filename="mfdepur-export-${user.email}-${stamp}.json"`);
   res.setHeader('Cache-Control', 'no-store');
   res.send(JSON.stringify(payload, null, 2));
-});
+}));
 
 // ── GDPR: cancellazione account (Art. 17 — diritto all'oblio) ─────────────────
 // Soft delete: anonimizza utente conservando ordini per obblighi fiscali (10 anni
 // per le fatture, art. 2220 c.c.). Email/nome/telefono sostituiti con marker.
-router.post('/delete', deleteAccountLimiter, async (req, res) => {
+router.post('/delete', deleteAccountLimiter, asyncHandler(async (req, res) => {
   const { confirm } = req.body;
   if (confirm !== 'ELIMINA') {
     return res.render('account/privacy', {
@@ -228,6 +229,6 @@ router.post('/delete', deleteAccountLimiter, async (req, res) => {
   res.clearCookie('accessToken', { path: '/' });
   res.clearCookie('refreshToken', { path: '/auth/refresh' });
   res.redirect('/?deleted=1');
-});
+}));
 
 module.exports = router;

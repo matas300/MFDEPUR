@@ -2,6 +2,35 @@ const prisma = require('../config/database');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const emailUtil = require('../utils/email');
 const { logAudit } = require('../utils/audit');
+const { logEmailFailure } = require('../utils/emailLogger');
+
+// ── Idempotency cache ─────────────────────────────────────────────────────────
+// In-memory idempotency cache: key → { orderId, expiresAt }
+// TTL: 5 minuti. Per scala prod con multi-istanza servirà Redis (scope M7).
+const IDEMPOTENCY_TTL_MS = 5 * 60 * 1000;
+const idempotencyCache = new Map();
+
+function idempotencyGet(key) {
+  const entry = idempotencyCache.get(key);
+  if (!entry) return null;
+  if (entry.expiresAt < Date.now()) {
+    idempotencyCache.delete(key);
+    return null;
+  }
+  return entry;
+}
+
+function idempotencySet(key, orderId) {
+  idempotencyCache.set(key, { orderId, expiresAt: Date.now() + IDEMPOTENCY_TTL_MS });
+}
+
+// Housekeeping: rimuovi entry scadute ogni 10 minuti
+setInterval(() => {
+  const now = Date.now();
+  for (const [k, v] of idempotencyCache.entries()) {
+    if (v.expiresAt < now) idempotencyCache.delete(k);
+  }
+}, 10 * 60 * 1000).unref();
 
 async function generateOrderNumber() {
   const year = new Date().getFullYear();
@@ -29,18 +58,31 @@ exports.getCheckout = async (req, res) => {
   const taxAmount = subtotal * 0.22;
   const total = subtotal + taxAmount;
 
+  const idempotencyKey = require('crypto').randomUUID();
+
   res.render('shop/checkout', {
     cart,
     addresses,
     totals: { subtotal, taxAmount, total, shippingCost: 0 },
     stripePublicKey: process.env.STRIPE_PUBLISHABLE_KEY,
     title: 'Checkout',
+    idempotencyKey,
   });
 };
 
 // POST /shop/checkout  — crea Stripe PaymentIntent e ordine PENDING
 exports.postCheckout = async (req, res) => {
   const { addressId, notes, paymentMethod = 'STRIPE' } = req.body;
+
+  // Idempotency: blocca double-submit (5 min TTL)
+  const idempotencyKey = req.body.idempotencyKey || req.get('idempotency-key');
+  if (idempotencyKey) {
+    const hit = idempotencyGet(idempotencyKey);
+    if (hit) {
+      // Duplicato: rispondi con lo stesso risultato senza creare un nuovo ordine.
+      return res.redirect(`/account/orders/${hit.orderId}?idempotent=1`);
+    }
+  }
 
   const cart = await prisma.cart.findUnique({
     where: { userId: req.user.id },
@@ -63,7 +105,7 @@ exports.postCheckout = async (req, res) => {
     }
   }
 
-  // Verifica stock
+  // Verifica stock preliminare (best-effort; check atomico in _finalizeOrder)
   for (const item of cart.items) {
     if (item.product.stock < item.quantity) {
       return res.render('shop/checkout', {
@@ -109,10 +151,14 @@ exports.postCheckout = async (req, res) => {
     include: { items: true, company: true },
   });
 
+  // Registra idempotency key dopo creazione ordine
+  if (idempotencyKey) idempotencySet(idempotencyKey, order.id);
+
   if (paymentMethod === 'BANK_TRANSFER') {
-    // Per bonifico: conferma immediata lato ordine, attende conferma manuale admin
-    await prisma.order.update({ where: { id: order.id }, data: { status: 'CONFIRMED' } });
-    await _finalizeOrder(order, cart, req.user);
+    // Per bonifico: finalize atomico (status + stock) e post-processing (email/cart clear).
+    // Se lo stock è insufficiente (race), _finalizeOrder lancia INSUFFICIENT_STOCK.
+    const finalized = await _finalizeOrder(order.id);
+    await _postFinalize(finalized, cart, req.user);
     return res.redirect(`/shop/checkout/success?orderId=${order.id}`);
   }
 
@@ -185,13 +231,33 @@ exports.stripeWebhook = async (req, res) => {
       where: { paymentIntentId: pi.id },
       include: { items: true, company: true, user: true },
     });
-    if (order && order.status === 'PENDING') {
-      await prisma.order.update({
-        where: { id: order.id },
-        data: { status: 'CONFIRMED', paidAt: new Date() },
-      });
-      const cart = await prisma.cart.findUnique({ where: { userId: order.userId }, include: { items: true } });
-      await _finalizeOrder(order, cart, order.user);
+    if (order) {
+      // Retry-aware: errori transienti (DB giù) → 500 e Stripe ritenta.
+      // Errori di business (stock insufficiente / stato ordine invalido) → 200,
+      // marchia PAYMENT_FAILED. Non ha senso ritentare: il pagamento è già
+      // incassato lato Stripe, servirà refund manuale.
+      try {
+        const finalized = await _finalizeOrder(order.id, { paymentIntentId: pi.id });
+        const cart = await prisma.cart.findUnique({
+          where: { userId: order.userId },
+          include: { items: true },
+        });
+        await _postFinalize(finalized, cart, order.user);
+      } catch (err) {
+        console.error('[stripe-webhook] _finalizeOrder fallito:', err.message);
+        if (err.code === 'INSUFFICIENT_STOCK' || err.code === 'ORDER_INVALID_STATE') {
+          await prisma.order.update({
+            where: { id: order.id },
+            data: {
+              status: 'PAYMENT_FAILED',
+              adminNotes: `Finalize fallito: ${err.message}`.slice(0, 500),
+            },
+          }).catch(() => {}); // idempotent best-effort
+          return res.status(200).json({ received: true, warning: err.message });
+        }
+        // Errore transiente: 500 → Stripe ritenta.
+        return res.status(500).json({ error: 'transient failure, please retry' });
+      }
     }
   }
 
@@ -229,23 +295,95 @@ exports.getOrderDetail = async (req, res) => {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-async function _finalizeOrder(order, cart, user) {
-  // Scala stock
-  for (const item of order.items) {
-    await prisma.product.update({
-      where: { id: item.productId },
-      data: { stock: { decrement: item.quantity } },
+// Finalizza un ordine in CONFIRMED atomicamente: verifica + decrementa stock e
+// aggiorna status in singola transazione Prisma. Se fallisce per stock
+// insufficiente, lancia err.code='INSUFFICIENT_STOCK'. Se l'ordine è già
+// CONFIRMED ritorna idempotente (webhook duplicato). Non esegue side-effect
+// (email, cart clear): quelli sono in _postFinalize, fuori dalla transazione.
+async function _finalizeOrder(orderId, { paidAt = new Date(), paymentIntentId = null } = {}) {
+  return await prisma.$transaction(async (tx) => {
+    const order = await tx.order.findUnique({
+      where: { id: orderId },
+      include: { items: true, company: true, user: true, address: true },
     });
-  }
+    if (!order) {
+      const e = new Error(`Order ${orderId} not found`);
+      e.code = 'ORDER_NOT_FOUND';
+      throw e;
+    }
+    if (order.status === 'CONFIRMED') {
+      return order; // idempotent: già confermato
+    }
+    if (order.status !== 'PENDING' && order.status !== 'PAYMENT_FAILED') {
+      const e = new Error(`Cannot finalize order in status ${order.status}`);
+      e.code = 'ORDER_INVALID_STATE';
+      throw e;
+    }
 
+    // Verifica stock atomicamente (Prisma decrement andrebbe sotto zero senza check)
+    for (const it of order.items) {
+      const prod = await tx.product.findUnique({
+        where: { id: it.productId },
+        select: { id: true, stock: true, name: true },
+      });
+      if (!prod) {
+        const e = new Error(`Product ${it.productId} not found`);
+        e.code = 'PRODUCT_NOT_FOUND';
+        throw e;
+      }
+      if (prod.stock < it.quantity) {
+        const e = new Error(`Stock insufficiente per ${prod.name}: richiesti ${it.quantity}, disponibili ${prod.stock}`);
+        e.code = 'INSUFFICIENT_STOCK';
+        throw e;
+      }
+    }
+
+    // Decrement stock
+    for (const it of order.items) {
+      await tx.product.update({
+        where: { id: it.productId },
+        data: { stock: { decrement: it.quantity } },
+      });
+    }
+
+    // Update order status
+    const updated = await tx.order.update({
+      where: { id: orderId },
+      data: {
+        status: 'CONFIRMED',
+        paidAt,
+        ...(paymentIntentId ? { paymentIntentId } : {}),
+      },
+      include: { items: true, company: true, user: true, address: true },
+    });
+
+    return updated;
+  });
+}
+
+// Post-finalize side-effects (fuori dalla transazione): svuota carrello, invia email.
+// Email failure non propaga (logging strutturato arriverà in commit successivo).
+async function _postFinalize(order, cart, user) {
   // Svuota carrello
   if (cart) {
-    await prisma.cartItem.deleteMany({ where: { cartId: cart.id } });
+    await prisma.cartItem.deleteMany({ where: { cartId: cart.id } }).catch(() => {}); // idempotent cleanup, silenzioso OK
   }
 
   // Email cliente
-  await emailUtil.sendOrderConfirmation(order, user).catch(() => {});
+  await emailUtil.sendOrderConfirmation(order, user).catch((err) => logEmailFailure({
+    to: user.email,
+    subject: `Ordine ${order.orderNumber}`,
+    templateName: 'sendOrderConfirmation',
+    err,
+    context: { orderId: order.id, userId: user.id },
+  }));
 
   // Email admin
-  await emailUtil.sendNewOrderNotificationAdmin(order, order.company).catch(() => {});
+  await emailUtil.sendNewOrderNotificationAdmin(order, order.company).catch((err) => logEmailFailure({
+    to: process.env.ADMIN_EMAIL || 'admin',
+    subject: `Nuovo ordine ${order.orderNumber}`,
+    templateName: 'sendNewOrderNotificationAdmin',
+    err,
+    context: { orderId: order.id, companyId: order.company?.id },
+  }));
 }
