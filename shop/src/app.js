@@ -88,6 +88,13 @@ app.use('/auth/login', rateLimit({ windowMs: 15 * 60 * 1000, max: 10, message: '
 app.use('/auth/register', rateLimit({ windowMs: 60 * 60 * 1000, max: 5 }));
 app.use('/auth/forgot-password', rateLimit({ windowMs: 60 * 60 * 1000, max: 5 }));
 
+app.use('/shop/checkout', rateLimit({
+  windowMs: 60 * 1000,
+  max: 10,
+  keyGenerator: (req) => req.user?.id || req.ip,
+  message: 'Troppi tentativi di checkout. Riprova tra un minuto.',
+}));
+
 // ── Static files + uploads ────────────────────────────────────────────────────
 app.use(express.static(path.join(__dirname, '../public')));
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
