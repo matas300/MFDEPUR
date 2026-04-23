@@ -66,24 +66,60 @@ router.get('/addresses', async (req, res) => {
   res.render('account/addresses', { addresses, title: 'Indirizzi di spedizione' });
 });
 
-router.post('/addresses', async (req, res) => {
-  const { label, street, city, province, postalCode, country, isDefault } = req.body;
-  if (isDefault) {
-    await prisma.address.updateMany({
-      where: { companyId: req.user.companyId },
-      data: { isDefault: false },
+router.post('/addresses',
+  [
+    body('label').optional({ checkFalsy: true }).trim().isLength({ max: 80 }),
+    body('street').trim().notEmpty().isLength({ max: MAX_LEN.addressStreet })
+      .withMessage(`Via obbligatoria (max ${MAX_LEN.addressStreet})`),
+    body('city').trim().notEmpty().isLength({ max: MAX_LEN.addressCity })
+      .withMessage(`Città obbligatoria (max ${MAX_LEN.addressCity})`),
+    body('province').trim().matches(/^[A-Z]{2}$/)
+      .withMessage('Provincia: 2 lettere maiuscole (es. MI)'),
+    body('postalCode').trim().matches(/^\d{5}$/)
+      .withMessage('CAP: 5 cifre'),
+    body('country').optional({ checkFalsy: true }).trim().isLength({ min: 2, max: 2 }).isAlpha()
+      .withMessage('Country code ISO-2 (es. IT)'),
+  ],
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      const addresses = await prisma.address.findMany({
+        where: { companyId: req.user.companyId },
+        orderBy: { isDefault: 'desc' },
+      });
+      return res.status(422).render('account/addresses', {
+        title: 'Indirizzi di spedizione',
+        addresses,
+        errors: errors.array().map(e => e.msg),
+      });
+    }
+
+    const { label, street, city, province, postalCode, country, isDefault } = req.body;
+
+    // Operazione atomica: reset isDefault + create in single transaction (M1-T6 anticipato)
+    await prisma.$transaction(async (tx) => {
+      if (isDefault === 'on') {
+        await tx.address.updateMany({
+          where: { companyId: req.user.companyId },
+          data: { isDefault: false },
+        });
+      }
+      await tx.address.create({
+        data: {
+          companyId: req.user.companyId,
+          label: label || 'Sede legale',
+          street: street.trim(),
+          city: city.trim(),
+          province: province.trim().toUpperCase(),
+          postalCode: postalCode.trim(),
+          country: (country || 'IT').toUpperCase(),
+          isDefault: isDefault === 'on',
+        },
+      });
     });
+    res.redirect('/account/addresses?success=1');
   }
-  await prisma.address.create({
-    data: {
-      companyId: req.user.companyId,
-      label, street, city, province, postalCode,
-      country: country || 'IT',
-      isDefault: isDefault === 'on',
-    },
-  });
-  res.redirect('/account/addresses?success=1');
-});
+);
 
 router.post('/addresses/:id/delete', async (req, res) => {
   await prisma.address.deleteMany({
