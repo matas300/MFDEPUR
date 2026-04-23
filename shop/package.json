@@ -2,6 +2,9 @@
   "name": "mfdepur-shop",
   "version": "1.0.0",
   "description": "MF Depur — B2B Shop",
+  "engines": {
+    "node": ">=18.17.0"
+  },
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
