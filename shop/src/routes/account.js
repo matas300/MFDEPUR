@@ -1,9 +1,17 @@
 const router = require('express').Router();
 const crypto = require('crypto');
+const rateLimit = require('express-rate-limit');
 const { requireAuth, requireApprovedCompany } = require('../middleware/auth');
 const orderCtrl = require('../controllers/orderController');
 const prisma = require('../config/database');
 const { logAudit } = require('../utils/audit');
+
+const deleteAccountLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 ora
+  max: 3,
+  keyGenerator: (req) => req.user?.id || req.ip,
+  message: 'Troppi tentativi di cancellazione. Riprova tra un\'ora.',
+});
 
 router.use(requireAuth);
 
@@ -109,7 +117,7 @@ router.get('/export', async (req, res) => {
 // ── GDPR: cancellazione account (Art. 17 — diritto all'oblio) ─────────────────
 // Soft delete: anonimizza utente conservando ordini per obblighi fiscali (10 anni
 // per le fatture, art. 2220 c.c.). Email/nome/telefono sostituiti con marker.
-router.post('/delete', async (req, res) => {
+router.post('/delete', deleteAccountLimiter, async (req, res) => {
   const { confirm } = req.body;
   if (confirm !== 'ELIMINA') {
     return res.render('account/privacy', {
