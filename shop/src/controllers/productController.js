@@ -1,5 +1,4 @@
 const prisma = require('../config/database');
-const path = require('path');
 const fs = require('fs');
 const { logAudit } = require('../utils/audit');
 
