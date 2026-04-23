@@ -1,4 +1,10 @@
+if (process.env.NODE_ENV === 'production') {
+  console.error('❌ seed.js non è eseguibile in produzione. NODE_ENV=production rifiutato.');
+  process.exit(1);
+}
+
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 require('dotenv').config();
 
 const prisma = require('../src/config/database');
@@ -8,7 +14,15 @@ async function main() {
 
   // ── Admin user ────────────────────────────────────────────────────────────
   const adminEmail = process.env.ADMIN_EMAIL || 'admin@mfdepur.com';
-  const adminPassword = process.env.ADMIN_PASSWORD || 'CambiaSubito!123';
+  const adminPassword = process.env.ADMIN_PASSWORD;
+  if (!adminPassword || adminPassword.length < 10) {
+    console.error('❌ ADMIN_PASSWORD non impostata o troppo corta (min 10 char). Aborto.');
+    process.exit(1);
+  }
+
+  // Password per le aziende demo: env var o generata random a runtime
+  const demoCompanyPassword = process.env.SEED_DEMO_PASSWORD || crypto.randomBytes(12).toString('base64');
+  console.log(`ℹ️  Password demo company generata: ${demoCompanyPassword}`);
 
   const existing = await prisma.user.findUnique({ where: { email: adminEmail } });
   if (!existing) {
@@ -376,7 +390,7 @@ async function main() {
       },
       user: {
         email: 'mario.rossi@acquatech.it',
-        password: 'Demo1234!',
+        password: demoCompanyPassword,
         firstName: 'Mario',
         lastName: 'Rossi',
         phone: '+39 333 1234567',
@@ -394,7 +408,7 @@ async function main() {
       },
       user: {
         email: 'giulia.bianchi@depnord.it',
-        password: 'Demo1234!',
+        password: demoCompanyPassword,
         firstName: 'Giulia',
         lastName: 'Bianchi',
         phone: '+39 347 9876543',
@@ -719,9 +733,9 @@ async function main() {
     }
   }
 
-  console.log('\n📋 Credenziali aziende mock:');
-  console.log('   mario.rossi@acquatech.it / Demo1234!  → APPROVATA');
-  console.log('   giulia.bianchi@depnord.it / Demo1234! → IN ATTESA');
+  console.log('\n📋 Credenziali aziende mock (password generata a runtime):');
+  console.log(`   mario.rossi@acquatech.it / ${demoCompanyPassword}  → APPROVATA`);
+  console.log(`   giulia.bianchi@depnord.it / ${demoCompanyPassword} → IN ATTESA`);
 
   console.log('\n🎉 Seed completato!');
 }
