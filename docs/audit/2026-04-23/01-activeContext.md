@@ -16,7 +16,8 @@
   - `12-code-quality.md` (20 findings · grade B)
   - `13-ui-ux-perf.md` (20 findings · a11y/perf GOOD)
   - `14-production-ready.md` (25 findings · NOT-READY)
-- **Fase 3 — Master Document:** 🟡 in corso
+- **Fase 3 — Master Document:** ✅ completata (99-MASTER.md)
+- **M0 — Quick wins & safety net:** ✅ implementata su branch `feat/M0-quick-wins` (17 commit, 1 subagent foundation + 5 subagent paralleli). Da **mergere in master** quando il PO approva.
 
 ## Conteggio findings per severity
 
