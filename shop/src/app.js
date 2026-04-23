@@ -16,6 +16,9 @@ const orderCtrl = require('./controllers/orderController');
 
 const app = express();
 
+const observability = require('./utils/observability');
+app.use(observability.requestHandler()); // no-op se Sentry disabilitato
+
 const IS_PROD = process.env.NODE_ENV === 'production';
 
 // ── Trust proxy in prod (reverse proxy Nginx/Cloudflare/Hostinger) ────────────
@@ -141,6 +144,8 @@ app.use((req, res) => {
 
 // ── CSRF error handler (prima del generico) ──────────────────────────────────
 app.use(csrfErrorHandler);
+
+app.use(observability.errorHandler()); // cattura errori prima del render custom
 
 // ── Error handler ─────────────────────────────────────────────────────────────
 app.use((err, req, res, next) => {
