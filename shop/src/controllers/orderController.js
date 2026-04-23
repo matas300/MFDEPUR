@@ -2,6 +2,7 @@ const prisma = require('../config/database');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const emailUtil = require('../utils/email');
 const { logAudit } = require('../utils/audit');
+const { logEmailFailure } = require('../utils/emailLogger');
 
 // ── Idempotency cache ─────────────────────────────────────────────────────────
 // In-memory idempotency cache: key → { orderId, expiresAt }
@@ -369,8 +370,20 @@ async function _postFinalize(order, cart, user) {
   }
 
   // Email cliente
-  await emailUtil.sendOrderConfirmation(order, user).catch(() => {});
+  await emailUtil.sendOrderConfirmation(order, user).catch((err) => logEmailFailure({
+    to: user.email,
+    subject: `Ordine ${order.orderNumber}`,
+    templateName: 'sendOrderConfirmation',
+    err,
+    context: { orderId: order.id, userId: user.id },
+  }));
 
   // Email admin
-  await emailUtil.sendNewOrderNotificationAdmin(order, order.company).catch(() => {});
+  await emailUtil.sendNewOrderNotificationAdmin(order, order.company).catch((err) => logEmailFailure({
+    to: process.env.ADMIN_EMAIL || 'admin',
+    subject: `Nuovo ordine ${order.orderNumber}`,
+    templateName: 'sendNewOrderNotificationAdmin',
+    err,
+    context: { orderId: order.id, companyId: order.company?.id },
+  }));
 }
