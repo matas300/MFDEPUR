@@ -5,7 +5,7 @@
 <div class="admin-overlay" id="adminOverlay"></div>
 
 <script src="/js/shop.js"></script>
-<script nonce="<%= cspNonce %>">
+<script nonce="<%= typeof cspNonce !== 'undefined' ? cspNonce : '' %>">
   (function() {
     const btn = document.getElementById('adminSidebarToggle');
     const sidebar = document.querySelector('.admin-sidebar');

@@ -68,7 +68,7 @@
                    value="<%= isEdit ? product.unit : 'kg' %>" required>
           </div>
         </div>
-        <script nonce="<%= cspNonce %>">
+        <script nonce="<%= typeof cspNonce !== 'undefined' ? cspNonce : '' %>">
           (function(){
             const cb = document.getElementById('priceOnRequest');
             const row = document.getElementById('priceRow');

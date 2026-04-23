@@ -48,9 +48,9 @@
   </div>
 </div>
 
-<script id="chart-data" type="application/json" nonce="<%= cspNonce %>"><%- JSON.stringify(chartData) %></script>
+<script id="chart-data" type="application/json" nonce="<%= typeof cspNonce !== 'undefined' ? cspNonce : '' %>"><%- JSON.stringify(chartData) %></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-<script nonce="<%= cspNonce %>">
+<script nonce="<%= typeof cspNonce !== 'undefined' ? cspNonce : '' %>">
 (function () {
   const data = JSON.parse(document.getElementById('chart-data').textContent);
   const ctx = document.getElementById('trendChart');

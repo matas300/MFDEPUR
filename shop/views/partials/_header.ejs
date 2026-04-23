@@ -109,7 +109,7 @@
 
 <main id="main-content" class="shop-main" tabindex="-1">
 
-<script nonce="<%= cspNonce %>">
+<script nonce="<%= typeof cspNonce !== 'undefined' ? cspNonce : '' %>">
   // Config utente per shop.js
   window.SHOP = {
     loggedIn: <%= !!currentUser %>,

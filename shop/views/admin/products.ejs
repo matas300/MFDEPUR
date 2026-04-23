@@ -101,7 +101,7 @@
   <% } %>
 <% } %>
 
-<script nonce="<%= cspNonce %>">
+<script nonce="<%= typeof cspNonce !== 'undefined' ? cspNonce : '' %>">
 // Toggle attivo/disattivo via AJAX (usa apiFetch per includere CSRF token)
 document.querySelectorAll('.toggle-form').forEach(form => {
   form.addEventListener('submit', async (e) => {

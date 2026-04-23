@@ -85,7 +85,7 @@
   </div>
 </div>
 
-<script nonce="<%= cspNonce %>">
+<script nonce="<%= typeof cspNonce !== 'undefined' ? cspNonce : '' %>">
 (function(){
   function editCategory(id, name, sortOrder) {
     document.getElementById('form-title-new').style.display = 'none';
