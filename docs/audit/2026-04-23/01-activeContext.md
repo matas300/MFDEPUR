@@ -17,7 +17,8 @@
   - `13-ui-ux-perf.md` (20 findings · a11y/perf GOOD)
   - `14-production-ready.md` (25 findings · NOT-READY)
 - **Fase 3 — Master Document:** ✅ completata (99-MASTER.md)
-- **M0 — Quick wins & safety net:** ✅ implementata su branch `feat/M0-quick-wins` (17 commit, 1 subagent foundation + 5 subagent paralleli). Da **mergere in master** quando il PO approva.
+- **M0 — Quick wins & safety net:** ✅ **merged in master** (merge commit `7a36304`, 18 commit totali, 20/20 task coperti)
+- **Prossimo:** M1 — Stability & concurrency (`asyncHandler`, SIGTERM/`server.close`, `prisma.$transaction` su stock+ordine, idempotency checkout, Sentry). Blocker go-live.
 
 ## Conteggio findings per severity
 
