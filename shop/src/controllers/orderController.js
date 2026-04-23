@@ -231,12 +231,32 @@ exports.stripeWebhook = async (req, res) => {
       include: { items: true, company: true, user: true },
     });
     if (order) {
-      const finalized = await _finalizeOrder(order.id, { paymentIntentId: pi.id });
-      const cart = await prisma.cart.findUnique({
-        where: { userId: order.userId },
-        include: { items: true },
-      });
-      await _postFinalize(finalized, cart, order.user);
+      // Retry-aware: errori transienti (DB giù) → 500 e Stripe ritenta.
+      // Errori di business (stock insufficiente / stato ordine invalido) → 200,
+      // marchia PAYMENT_FAILED. Non ha senso ritentare: il pagamento è già
+      // incassato lato Stripe, servirà refund manuale.
+      try {
+        const finalized = await _finalizeOrder(order.id, { paymentIntentId: pi.id });
+        const cart = await prisma.cart.findUnique({
+          where: { userId: order.userId },
+          include: { items: true },
+        });
+        await _postFinalize(finalized, cart, order.user);
+      } catch (err) {
+        console.error('[stripe-webhook] _finalizeOrder fallito:', err.message);
+        if (err.code === 'INSUFFICIENT_STOCK' || err.code === 'ORDER_INVALID_STATE') {
+          await prisma.order.update({
+            where: { id: order.id },
+            data: {
+              status: 'PAYMENT_FAILED',
+              adminNotes: `Finalize fallito: ${err.message}`.slice(0, 500),
+            },
+          }).catch(() => {}); // idempotent best-effort
+          return res.status(200).json({ received: true, warning: err.message });
+        }
+        // Errore transiente: 500 → Stripe ritenta.
+        return res.status(500).json({ error: 'transient failure, please retry' });
+      }
     }
   }
 
