@@ -215,3 +215,21 @@ model AuditLog {
   @@index([userId])
   @@index([createdAt])
 }
+
+// ─── EMAIL FAILURE LOG ────────────────────────────────────────────────────────
+// Registra i tentativi di invio email falliti. M7 introdurrà retry automatico
+// via BullMQ. Per ora il log serve solo per visibilità + manual resend.
+
+model EmailFailureLog {
+  id           String   @id @default(cuid())
+  toAddress    String
+  subject      String
+  templateName String?  // es. "sendPasswordReset", "sendOrderConfirmation"
+  errorMessage String
+  errorCode    String?  // SMTP code se disponibile
+  context      String?  // JSON con orderId/userId/etc per debug
+  createdAt    DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([toAddress])
+}
