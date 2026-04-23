@@ -1,3 +1,4 @@
+require('./src/config/env'); // deve essere la PRIMA riga (valida env e fail-fast)
 const app = require('./src/app');
 const prisma = require('./src/config/database');
 
