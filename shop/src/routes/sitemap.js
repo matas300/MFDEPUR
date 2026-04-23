@@ -1,6 +1,7 @@
 const prisma = require('../config/database');
+const asyncHandler = require('../utils/asyncHandler');
 
-module.exports = async (req, res) => {
+module.exports = asyncHandler(async (req, res) => {
   const baseUrl = process.env.BASE_URL || 'https://www.mfdepur.com';
 
   const products = await prisma.product.findMany({
@@ -31,4 +32,4 @@ module.exports = async (req, res) => {
 
   res.header('Content-Type', 'application/xml');
   res.send(xml);
-};
+});
