@@ -17,8 +17,10 @@
   - `13-ui-ux-perf.md` (20 findings · a11y/perf GOOD)
   - `14-production-ready.md` (25 findings · NOT-READY)
 - **Fase 3 — Master Document:** ✅ completata (99-MASTER.md)
-- **M0 — Quick wins & safety net:** ✅ **merged in master** (merge commit `7a36304`, 18 commit totali, 20/20 task coperti)
-- **Prossimo:** M1 — Stability & concurrency (`asyncHandler`, SIGTERM/`server.close`, `prisma.$transaction` su stock+ordine, idempotency checkout, Sentry). Blocker go-live.
+- **M0 — Quick wins & safety net:** ✅ **merged in master** (18 commit)
+- **M1 — Stability & concurrency:** ✅ **merged in master** (17 commit, 10/10 task coperti — 8 implementati + 2 già chiusi in M0). Include: asyncHandler+wrap routes, graceful shutdown SIGTERM+server.close+timeout30s, unhandled→shutdown, Sentry opt-in, `$transaction` stock/ordine, idempotency checkout 5min, Stripe webhook retry-aware, EmailFailureLog + logger strutturato.
+- **Follow-up M1 da M7:** webhook Stripe duplicato può re-inviare email (dedupe con queue)
+- **Prossimo:** M2 (fiscal IT — richiede decisione provider SDI) o M3 (prod readiness: Postgres/migrations/health/CI) o M4 (test). M2+M3 parallelizzabili dopo decisione SDI.
 
 ## Conteggio findings per severity
 
