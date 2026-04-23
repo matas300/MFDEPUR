@@ -95,6 +95,14 @@ app.use('/shop/checkout', rateLimit({
   message: 'Troppi tentativi di checkout. Riprova tra un minuto.',
 }));
 
+// Rate limit mutations carrello (add/update/remove/clear — non i GET read)
+app.use(['/shop/cart/add', '/shop/cart/update', '/shop/cart/remove', '/shop/cart/clear', '/shop/cart/item'], rateLimit({
+  windowMs: 60 * 1000,
+  max: 60,
+  keyGenerator: (req) => req.user?.id || req.ip,
+  message: 'Troppe operazioni sul carrello. Rallenta un attimo.',
+}));
+
 // ── Static files + uploads ────────────────────────────────────────────────────
 app.use(express.static(path.join(__dirname, '../public')));
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
