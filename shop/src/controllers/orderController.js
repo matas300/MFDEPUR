@@ -63,7 +63,7 @@ exports.postCheckout = async (req, res) => {
     }
   }
 
-  // Verifica stock
+  // Verifica stock preliminare (best-effort; check atomico in _finalizeOrder)
   for (const item of cart.items) {
     if (item.product.stock < item.quantity) {
       return res.render('shop/checkout', {
@@ -110,9 +110,10 @@ exports.postCheckout = async (req, res) => {
   });
 
   if (paymentMethod === 'BANK_TRANSFER') {
-    // Per bonifico: conferma immediata lato ordine, attende conferma manuale admin
-    await prisma.order.update({ where: { id: order.id }, data: { status: 'CONFIRMED' } });
-    await _finalizeOrder(order, cart, req.user);
+    // Per bonifico: finalize atomico (status + stock) e post-processing (email/cart clear).
+    // Se lo stock è insufficiente (race), _finalizeOrder lancia INSUFFICIENT_STOCK.
+    const finalized = await _finalizeOrder(order.id);
+    await _postFinalize(finalized, cart, req.user);
     return res.redirect(`/shop/checkout/success?orderId=${order.id}`);
   }
 
@@ -185,13 +186,13 @@ exports.stripeWebhook = async (req, res) => {
       where: { paymentIntentId: pi.id },
       include: { items: true, company: true, user: true },
     });
-    if (order && order.status === 'PENDING') {
-      await prisma.order.update({
-        where: { id: order.id },
-        data: { status: 'CONFIRMED', paidAt: new Date() },
+    if (order) {
+      const finalized = await _finalizeOrder(order.id, { paymentIntentId: pi.id });
+      const cart = await prisma.cart.findUnique({
+        where: { userId: order.userId },
+        include: { items: true },
       });
-      const cart = await prisma.cart.findUnique({ where: { userId: order.userId }, include: { items: true } });
-      await _finalizeOrder(order, cart, order.user);
+      await _postFinalize(finalized, cart, order.user);
     }
   }
 
@@ -229,18 +230,78 @@ exports.getOrderDetail = async (req, res) => {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-async function _finalizeOrder(order, cart, user) {
-  // Scala stock
-  for (const item of order.items) {
-    await prisma.product.update({
-      where: { id: item.productId },
-      data: { stock: { decrement: item.quantity } },
+// Finalizza un ordine in CONFIRMED atomicamente: verifica + decrementa stock e
+// aggiorna status in singola transazione Prisma. Se fallisce per stock
+// insufficiente, lancia err.code='INSUFFICIENT_STOCK'. Se l'ordine è già
+// CONFIRMED ritorna idempotente (webhook duplicato). Non esegue side-effect
+// (email, cart clear): quelli sono in _postFinalize, fuori dalla transazione.
+async function _finalizeOrder(orderId, { paidAt = new Date(), paymentIntentId = null } = {}) {
+  return await prisma.$transaction(async (tx) => {
+    const order = await tx.order.findUnique({
+      where: { id: orderId },
+      include: { items: true, company: true, user: true, address: true },
     });
-  }
+    if (!order) {
+      const e = new Error(`Order ${orderId} not found`);
+      e.code = 'ORDER_NOT_FOUND';
+      throw e;
+    }
+    if (order.status === 'CONFIRMED') {
+      return order; // idempotent: già confermato
+    }
+    if (order.status !== 'PENDING' && order.status !== 'PAYMENT_FAILED') {
+      const e = new Error(`Cannot finalize order in status ${order.status}`);
+      e.code = 'ORDER_INVALID_STATE';
+      throw e;
+    }
 
+    // Verifica stock atomicamente (Prisma decrement andrebbe sotto zero senza check)
+    for (const it of order.items) {
+      const prod = await tx.product.findUnique({
+        where: { id: it.productId },
+        select: { id: true, stock: true, name: true },
+      });
+      if (!prod) {
+        const e = new Error(`Product ${it.productId} not found`);
+        e.code = 'PRODUCT_NOT_FOUND';
+        throw e;
+      }
+      if (prod.stock < it.quantity) {
+        const e = new Error(`Stock insufficiente per ${prod.name}: richiesti ${it.quantity}, disponibili ${prod.stock}`);
+        e.code = 'INSUFFICIENT_STOCK';
+        throw e;
+      }
+    }
+
+    // Decrement stock
+    for (const it of order.items) {
+      await tx.product.update({
+        where: { id: it.productId },
+        data: { stock: { decrement: it.quantity } },
+      });
+    }
+
+    // Update order status
+    const updated = await tx.order.update({
+      where: { id: orderId },
+      data: {
+        status: 'CONFIRMED',
+        paidAt,
+        ...(paymentIntentId ? { paymentIntentId } : {}),
+      },
+      include: { items: true, company: true, user: true, address: true },
+    });
+
+    return updated;
+  });
+}
+
+// Post-finalize side-effects (fuori dalla transazione): svuota carrello, invia email.
+// Email failure non propaga (logging strutturato arriverà in commit successivo).
+async function _postFinalize(order, cart, user) {
   // Svuota carrello
   if (cart) {
-    await prisma.cartItem.deleteMany({ where: { cartId: cart.id } });
+    await prisma.cartItem.deleteMany({ where: { cartId: cart.id } }).catch(() => {}); // idempotent cleanup, silenzioso OK
   }
 
   // Email cliente
