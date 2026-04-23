@@ -2,6 +2,18 @@ const prisma = require('../config/database');
 const fs = require('fs');
 const { logAudit } = require('../utils/audit');
 
+// Clamp helpers — normalizzano input numerico: NaN → def, fuori range → clamp
+const clampInt = (v, min, max, def = 0) => {
+  const n = parseInt(v, 10);
+  if (Number.isNaN(n)) return def;
+  return Math.max(min, Math.min(max, n));
+};
+const clampFloat = (v, min, max, def = 0) => {
+  const n = parseFloat(v);
+  if (Number.isNaN(n)) return def;
+  return Math.max(min, Math.min(max, n));
+};
+
 // ── Shop pubblico ─────────────────────────────────────────────────────────────
 
 // Normalizza qualsiasi valore di query in stringa sicura (primo elemento se array)
@@ -160,6 +172,18 @@ exports.adminEditForm = async (req, res) => {
 // POST /admin/products  — crea
 exports.adminCreate = async (req, res) => {
   const data = _parseProductBody(req.body, req.file);
+
+  // Verifica existence categoryId (se fornito)
+  if (data.categoryId) {
+    const cat = await prisma.category.findUnique({
+      where: { id: data.categoryId },
+      select: { id: true },
+    });
+    if (!cat) {
+      return res.status(400).render('error', { message: 'Categoria non valida.', code: 400 });
+    }
+  }
+
   // Genera slug dal nome
   data.slug = _slugify(data.name);
 
@@ -178,8 +202,28 @@ exports.adminCreate = async (req, res) => {
 
 // POST /admin/products/:id — aggiorna
 exports.adminUpdate = async (req, res) => {
+  // Verifica existence product
+  const existing = await prisma.product.findUnique({
+    where: { id: req.params.id },
+    select: { id: true },
+  });
+  if (!existing) {
+    return res.status(404).render('error', { message: 'Prodotto non trovato.', code: 404 });
+  }
+
   const data = _parseProductBody(req.body, req.file);
   delete data.slug; // lo slug non cambia dopo la creazione
+
+  // Verifica existence categoryId (se fornito)
+  if (data.categoryId) {
+    const cat = await prisma.category.findUnique({
+      where: { id: data.categoryId },
+      select: { id: true },
+    });
+    if (!cat) {
+      return res.status(400).render('error', { message: 'Categoria non valida.', code: 400 });
+    }
+  }
 
   await prisma.product.update({ where: { id: req.params.id }, data });
   logAudit(req, { action: 'PRODUCT_UPDATE', entityType: 'Product', entityId: req.params.id, metadata: { name: data.name, priceOnRequest: data.priceOnRequest, isActive: data.isActive } });
@@ -219,7 +263,9 @@ exports.adminCategories = async (req, res) => {
 exports.adminCreateCategory = async (req, res) => {
   const { name, description, sortOrder } = req.body;
   const slug = _slugify(name);
-  await prisma.category.create({ data: { name, slug, description, sortOrder: parseInt(sortOrder) || 0 } });
+  await prisma.category.create({
+    data: { name, slug, description, sortOrder: clampInt(sortOrder, 0, 10_000, 0) },
+  });
   res.redirect('/admin/categories?success=1');
 };
 
@@ -227,7 +273,7 @@ exports.adminUpdateCategory = async (req, res) => {
   const { name, description, sortOrder } = req.body;
   await prisma.category.update({
     where: { id: req.params.id },
-    data: { name, description, sortOrder: parseInt(sortOrder) || 0 },
+    data: { name, description, sortOrder: clampInt(sortOrder, 0, 10_000, 0) },
   });
   res.redirect('/admin/categories?success=1');
 };
@@ -238,15 +284,15 @@ function _parseProductBody(body, file) {
   const priceOnRequest = body.priceOnRequest === 'on' || body.priceOnRequest === 'true';
   const data = {
     name: body.name?.trim(),
-    shortDesc: body.shortDesc?.trim() || null,
+    shortDesc: body.shortDesc?.trim().slice(0, 300) || null,
     description: body.description?.trim() || null,
-    price: priceOnRequest ? 0 : parseFloat(body.price) || 0,
-    comparePrice: body.comparePrice ? parseFloat(body.comparePrice) : null,
+    price: priceOnRequest ? 0 : clampFloat(body.price, 0, 1_000_000, 0),
+    comparePrice: body.comparePrice ? clampFloat(body.comparePrice, 0, 1_000_000, 0) : null,
     sku: body.sku?.trim() || null,
-    stock: parseInt(body.stock) || 0,
-    lowStockAlert: parseInt(body.lowStockAlert) || 10,
+    stock: clampInt(body.stock, 0, 1_000_000, 0),
+    lowStockAlert: clampInt(body.lowStockAlert, 0, 10_000, 10),
     unit: body.unit?.trim() || 'kg',
-    minOrderQty: parseInt(body.minOrderQty) || 1,
+    minOrderQty: clampInt(body.minOrderQty, 1, 10_000, 1),
     isActive: body.isActive === 'on' || body.isActive === 'true',
     isFeatured: body.isFeatured === 'on' || body.isFeatured === 'true',
     priceOnRequest,
@@ -256,6 +302,11 @@ function _parseProductBody(body, file) {
       : [],
     technicalSheet: body.technicalSheet?.trim() || null,
   };
+
+  // Sanity: comparePrice deve essere > price, altrimenti null
+  if (data.comparePrice !== null && data.comparePrice <= data.price) {
+    data.comparePrice = null;
+  }
 
   if (file) {
     data.imageUrl = `/uploads/${file.filename}`;
