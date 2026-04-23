@@ -1,9 +1,11 @@
 const router = require('express').Router();
 const crypto = require('crypto');
 const rateLimit = require('express-rate-limit');
+const { body, validationResult } = require('express-validator');
 const { requireAuth, requireApprovedCompany } = require('../middleware/auth');
 const orderCtrl = require('../controllers/orderController');
 const prisma = require('../config/database');
+const { MAX_LEN } = require('../config/constants');
 const { logAudit } = require('../utils/audit');
 
 const deleteAccountLimiter = rateLimit({
@@ -25,14 +27,35 @@ router.get('/orders/:id', requireApprovedCompany, orderCtrl.getOrderDetail);
 // Profilo
 router.get('/profile', (req, res) => res.render('account/profile', { title: 'Profilo', success: req.query.success }));
 
-router.post('/profile', async (req, res) => {
-  const { firstName, lastName, phone } = req.body;
-  await prisma.user.update({
-    where: { id: req.user.id },
-    data: { firstName: firstName.trim(), lastName: lastName.trim(), phone: phone?.trim() || null },
-  });
-  res.redirect('/account/profile?success=1');
-});
+router.post('/profile',
+  [
+    body('firstName').trim().notEmpty().isLength({ max: MAX_LEN.firstName })
+      .withMessage(`Nome obbligatorio (max ${MAX_LEN.firstName} caratteri)`),
+    body('lastName').trim().notEmpty().isLength({ max: MAX_LEN.lastName })
+      .withMessage(`Cognome obbligatorio (max ${MAX_LEN.lastName} caratteri)`),
+    body('phone').optional({ checkFalsy: true }).trim().isLength({ max: MAX_LEN.phone })
+      .withMessage(`Telefono troppo lungo (max ${MAX_LEN.phone} caratteri)`),
+  ],
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(422).render('account/profile', {
+        title: 'Profilo',
+        errors: errors.array().map(e => e.msg),
+      });
+    }
+    const { firstName, lastName, phone } = req.body;
+    await prisma.user.update({
+      where: { id: req.user.id },
+      data: {
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        phone: phone?.trim() || null,
+      },
+    });
+    res.redirect('/account/profile?success=1');
+  }
+);
 
 // Indirizzi
 router.get('/addresses', async (req, res) => {
