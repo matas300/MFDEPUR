@@ -2,6 +2,7 @@ const router = require('express').Router();
 const { body } = require('express-validator');
 const rateLimit = require('express-rate-limit');
 const ctrl = require('../controllers/authController');
+const asyncHandler = require('../utils/asyncHandler');
 
 const resetLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
@@ -37,20 +38,20 @@ const resetPasswordRules = [
 ];
 
 router.get('/login', ctrl.getLogin);
-router.post('/login', loginRules, ctrl.postLogin);
+router.post('/login', loginRules, asyncHandler(ctrl.postLogin));
 
 router.get('/register', ctrl.getRegister);
-router.post('/register', registerRules, ctrl.postRegister);
+router.post('/register', registerRules, asyncHandler(ctrl.postRegister));
 
-router.get('/verify-email', ctrl.verifyEmail);
+router.get('/verify-email', asyncHandler(ctrl.verifyEmail));
 
-router.post('/logout', ctrl.logout);
-router.post('/refresh', ctrl.refresh);
+router.post('/logout', asyncHandler(ctrl.logout));
+router.post('/refresh', asyncHandler(ctrl.refresh));
 
 router.get('/forgot-password', ctrl.getForgot);
-router.post('/forgot-password', ctrl.postForgot);
+router.post('/forgot-password', asyncHandler(ctrl.postForgot));
 
-router.get('/reset-password', ctrl.getResetPassword);
-router.post('/reset-password', resetLimiter, resetPasswordRules, ctrl.postResetPassword);
+router.get('/reset-password', asyncHandler(ctrl.getResetPassword));
+router.post('/reset-password', resetLimiter, resetPasswordRules, asyncHandler(ctrl.postResetPassword));
 
 module.exports = router;
