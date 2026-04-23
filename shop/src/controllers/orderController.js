@@ -1,6 +1,7 @@
 const prisma = require('../config/database');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const emailUtil = require('../utils/email');
+const { logAudit } = require('../utils/audit');
 
 async function generateOrderNumber() {
   const year = new Date().getFullYear();
@@ -47,6 +48,20 @@ exports.postCheckout = async (req, res) => {
   });
 
   if (!cart || cart.items.length === 0) return res.redirect('/shop/cart');
+
+  // Ownership check: l'indirizzo deve appartenere alla company dell'utente (IDOR fix)
+  if (addressId) {
+    const addr = await prisma.address.findFirst({
+      where: { id: addressId, companyId: req.user.companyId },
+      select: { id: true },
+    });
+    if (!addr) {
+      return res.status(403).render('error', {
+        message: 'Indirizzo non valido o non autorizzato.',
+        code: 403,
+      });
+    }
+  }
 
   // Verifica stock
   for (const item of cart.items) {
@@ -153,6 +168,13 @@ exports.stripeWebhook = async (req, res) => {
   try {
     event = stripe.webhooks.constructEvent(req.rawBody, sig, secret);
   } catch (err) {
+    // Persist invalid-sig in AuditLog — best-effort, non-blocking
+    await logAudit(req, {
+      action: 'STRIPE_WEBHOOK_INVALID_SIG',
+      entityType: 'Webhook',
+      entityId: null,
+      metadata: { error: err.message?.slice(0, 500) },
+    });
     console.warn('[stripe-webhook] firma non valida:', err.message);
     return res.status(400).send(`Webhook error: ${err.message}`);
   }

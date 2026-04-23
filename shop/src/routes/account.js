@@ -1,9 +1,19 @@
 const router = require('express').Router();
 const crypto = require('crypto');
+const rateLimit = require('express-rate-limit');
+const { body, validationResult } = require('express-validator');
 const { requireAuth, requireApprovedCompany } = require('../middleware/auth');
 const orderCtrl = require('../controllers/orderController');
 const prisma = require('../config/database');
+const { MAX_LEN } = require('../config/constants');
 const { logAudit } = require('../utils/audit');
+
+const deleteAccountLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 ora
+  max: 3,
+  keyGenerator: (req) => req.user?.id || req.ip,
+  message: 'Troppi tentativi di cancellazione. Riprova tra un\'ora.',
+});
 
 router.use(requireAuth);
 
@@ -17,14 +27,35 @@ router.get('/orders/:id', requireApprovedCompany, orderCtrl.getOrderDetail);
 // Profilo
 router.get('/profile', (req, res) => res.render('account/profile', { title: 'Profilo', success: req.query.success }));
 
-router.post('/profile', async (req, res) => {
-  const { firstName, lastName, phone } = req.body;
-  await prisma.user.update({
-    where: { id: req.user.id },
-    data: { firstName: firstName.trim(), lastName: lastName.trim(), phone: phone?.trim() || null },
-  });
-  res.redirect('/account/profile?success=1');
-});
+router.post('/profile',
+  [
+    body('firstName').trim().notEmpty().isLength({ max: MAX_LEN.firstName })
+      .withMessage(`Nome obbligatorio (max ${MAX_LEN.firstName} caratteri)`),
+    body('lastName').trim().notEmpty().isLength({ max: MAX_LEN.lastName })
+      .withMessage(`Cognome obbligatorio (max ${MAX_LEN.lastName} caratteri)`),
+    body('phone').optional({ checkFalsy: true }).trim().isLength({ max: MAX_LEN.phone })
+      .withMessage(`Telefono troppo lungo (max ${MAX_LEN.phone} caratteri)`),
+  ],
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(422).render('account/profile', {
+        title: 'Profilo',
+        errors: errors.array().map(e => e.msg),
+      });
+    }
+    const { firstName, lastName, phone } = req.body;
+    await prisma.user.update({
+      where: { id: req.user.id },
+      data: {
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        phone: phone?.trim() || null,
+      },
+    });
+    res.redirect('/account/profile?success=1');
+  }
+);
 
 // Indirizzi
 router.get('/addresses', async (req, res) => {
@@ -35,24 +66,60 @@ router.get('/addresses', async (req, res) => {
   res.render('account/addresses', { addresses, title: 'Indirizzi di spedizione' });
 });
 
-router.post('/addresses', async (req, res) => {
-  const { label, street, city, province, postalCode, country, isDefault } = req.body;
-  if (isDefault) {
-    await prisma.address.updateMany({
-      where: { companyId: req.user.companyId },
-      data: { isDefault: false },
+router.post('/addresses',
+  [
+    body('label').optional({ checkFalsy: true }).trim().isLength({ max: 80 }),
+    body('street').trim().notEmpty().isLength({ max: MAX_LEN.addressStreet })
+      .withMessage(`Via obbligatoria (max ${MAX_LEN.addressStreet})`),
+    body('city').trim().notEmpty().isLength({ max: MAX_LEN.addressCity })
+      .withMessage(`Città obbligatoria (max ${MAX_LEN.addressCity})`),
+    body('province').trim().matches(/^[A-Z]{2}$/)
+      .withMessage('Provincia: 2 lettere maiuscole (es. MI)'),
+    body('postalCode').trim().matches(/^\d{5}$/)
+      .withMessage('CAP: 5 cifre'),
+    body('country').optional({ checkFalsy: true }).trim().isLength({ min: 2, max: 2 }).isAlpha()
+      .withMessage('Country code ISO-2 (es. IT)'),
+  ],
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      const addresses = await prisma.address.findMany({
+        where: { companyId: req.user.companyId },
+        orderBy: { isDefault: 'desc' },
+      });
+      return res.status(422).render('account/addresses', {
+        title: 'Indirizzi di spedizione',
+        addresses,
+        errors: errors.array().map(e => e.msg),
+      });
+    }
+
+    const { label, street, city, province, postalCode, country, isDefault } = req.body;
+
+    // Operazione atomica: reset isDefault + create in single transaction (M1-T6 anticipato)
+    await prisma.$transaction(async (tx) => {
+      if (isDefault === 'on') {
+        await tx.address.updateMany({
+          where: { companyId: req.user.companyId },
+          data: { isDefault: false },
+        });
+      }
+      await tx.address.create({
+        data: {
+          companyId: req.user.companyId,
+          label: label || 'Sede legale',
+          street: street.trim(),
+          city: city.trim(),
+          province: province.trim().toUpperCase(),
+          postalCode: postalCode.trim(),
+          country: (country || 'IT').toUpperCase(),
+          isDefault: isDefault === 'on',
+        },
+      });
     });
+    res.redirect('/account/addresses?success=1');
   }
-  await prisma.address.create({
-    data: {
-      companyId: req.user.companyId,
-      label, street, city, province, postalCode,
-      country: country || 'IT',
-      isDefault: isDefault === 'on',
-    },
-  });
-  res.redirect('/account/addresses?success=1');
-});
+);
 
 router.post('/addresses/:id/delete', async (req, res) => {
   await prisma.address.deleteMany({
@@ -109,7 +176,7 @@ router.get('/export', async (req, res) => {
 // ── GDPR: cancellazione account (Art. 17 — diritto all'oblio) ─────────────────
 // Soft delete: anonimizza utente conservando ordini per obblighi fiscali (10 anni
 // per le fatture, art. 2220 c.c.). Email/nome/telefono sostituiti con marker.
-router.post('/delete', async (req, res) => {
+router.post('/delete', deleteAccountLimiter, async (req, res) => {
   const { confirm } = req.body;
   if (confirm !== 'ELIMINA') {
     return res.render('account/privacy', {

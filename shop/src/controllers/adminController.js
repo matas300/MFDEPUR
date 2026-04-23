@@ -1,6 +1,7 @@
 const prisma = require('../config/database');
 const emailUtil = require('../utils/email');
 const { logAudit } = require('../utils/audit');
+const { COMPANY_STATUSES, MAX_LEN, ORDER_STATUSES, ORDER_STATUS_TRANSITIONS } = require('../config/constants');
 
 // GET /admin  — dashboard
 exports.getDashboard = async (req, res) => {
@@ -76,8 +77,6 @@ exports.getDashboard = async (req, res) => {
 };
 
 // ── Ordini ────────────────────────────────────────────────────────────────────
-
-const ORDER_STATUSES = ['PENDING', 'CONFIRMED', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED', 'REFUNDED', 'PAYMENT_FAILED'];
 
 // Costruisce il filtro Prisma condiviso tra lista e export
 function buildOrdersWhere(query) {
@@ -225,16 +224,50 @@ exports.getOrderDetail = async (req, res) => {
 
 exports.updateOrderStatus = async (req, res) => {
   const { status, adminNotes, trackingNumber } = req.body;
-  const prev = await prisma.order.findUnique({ where: { id: req.params.id }, select: { status: true } });
-  const order = await prisma.order.update({
+
+  // Validazione enum stato ordine
+  if (!ORDER_STATUSES.includes(status)) {
+    return res.status(400).render('error', {
+      message: `Stato ordine non valido. Ammessi: ${ORDER_STATUSES.join(', ')}`,
+      code: 400,
+    });
+  }
+
+  const current = await prisma.order.findUnique({
     where: { id: req.params.id },
-    data: {
-      status,
-      adminNotes: adminNotes || undefined,
-      trackingNumber: trackingNumber || undefined,
-      shippedAt: status === 'SHIPPED' ? new Date() : undefined,
-      deliveredAt: status === 'DELIVERED' ? new Date() : undefined,
-    },
+    select: { id: true, status: true, shippedAt: true, deliveredAt: true },
+  });
+  if (!current) {
+    return res.status(404).render('error', { message: 'Ordine non trovato.', code: 404 });
+  }
+
+  // State machine: transizione permessa (stesso stato è no-op ammesso)
+  const allowed = ORDER_STATUS_TRANSITIONS[current.status] || [];
+  if (status !== current.status && !allowed.includes(status)) {
+    return res.status(400).render('error', {
+      message: `Transizione non permessa: ${current.status} → ${status}. Permessi: ${allowed.join(', ') || '(nessuno)'}`,
+      code: 400,
+    });
+  }
+
+  // Clamp free-text a MAX_LEN
+  const data = { status };
+  if (trackingNumber !== undefined) {
+    data.trackingNumber = trackingNumber
+      ? String(trackingNumber).slice(0, MAX_LEN.trackingNumber)
+      : undefined;
+  }
+  if (adminNotes !== undefined) {
+    data.adminNotes = adminNotes
+      ? String(adminNotes).slice(0, MAX_LEN.orderNotes)
+      : undefined;
+  }
+  if (status === 'SHIPPED'   && !current.shippedAt)   data.shippedAt = new Date();
+  if (status === 'DELIVERED' && !current.deliveredAt) data.deliveredAt = new Date();
+
+  const order = await prisma.order.update({
+    where: { id: current.id },
+    data,
     include: { user: true, company: true, items: true },
   });
 
@@ -242,7 +275,7 @@ exports.updateOrderStatus = async (req, res) => {
     action: 'ORDER_STATUS_CHANGE',
     entityType: 'Order',
     entityId: order.id,
-    metadata: { from: prev?.status, to: order.status, trackingNumber: trackingNumber || null },
+    metadata: { from: current.status, to: order.status, trackingNumber: data.trackingNumber || null },
   });
 
   if (req.accepts('json')) return res.json({ ok: true, status: order.status });
@@ -290,10 +323,22 @@ exports.getCompanies = async (req, res) => {
 
 exports.updateCompanyStatus = async (req, res) => {
   const { status, notes } = req.body;
+
+  // Validazione enum stato company
+  if (!COMPANY_STATUSES.includes(status)) {
+    return res.status(400).render('error', {
+      message: `Stato company non valido. Ammessi: ${COMPANY_STATUSES.join(', ')}`,
+      code: 400,
+    });
+  }
+
+  // Clamp free-text notes a MAX_LEN.companyNotes
+  const safeNotes = notes ? String(notes).slice(0, MAX_LEN.companyNotes) : undefined;
+
   const prev = await prisma.company.findUnique({ where: { id: req.params.id }, select: { status: true } });
   const company = await prisma.company.update({
     where: { id: req.params.id },
-    data: { status, notes: notes || undefined },
+    data: { status, notes: safeNotes },
     include: { users: true },
   });
 
@@ -308,7 +353,7 @@ exports.updateCompanyStatus = async (req, res) => {
     action: `COMPANY_${status}`,
     entityType: 'Company',
     entityId: company.id,
-    metadata: { from: prev?.status, to: company.status, companyName: company.name, notes: notes || null },
+    metadata: { from: prev?.status, to: company.status, companyName: company.name, notes: safeNotes || null },
   });
 
   if (req.accepts('json')) return res.json({ ok: true, status: company.status });
