@@ -3,6 +3,34 @@ const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const emailUtil = require('../utils/email');
 const { logAudit } = require('../utils/audit');
 
+// ── Idempotency cache ─────────────────────────────────────────────────────────
+// In-memory idempotency cache: key → { orderId, expiresAt }
+// TTL: 5 minuti. Per scala prod con multi-istanza servirà Redis (scope M7).
+const IDEMPOTENCY_TTL_MS = 5 * 60 * 1000;
+const idempotencyCache = new Map();
+
+function idempotencyGet(key) {
+  const entry = idempotencyCache.get(key);
+  if (!entry) return null;
+  if (entry.expiresAt < Date.now()) {
+    idempotencyCache.delete(key);
+    return null;
+  }
+  return entry;
+}
+
+function idempotencySet(key, orderId) {
+  idempotencyCache.set(key, { orderId, expiresAt: Date.now() + IDEMPOTENCY_TTL_MS });
+}
+
+// Housekeeping: rimuovi entry scadute ogni 10 minuti
+setInterval(() => {
+  const now = Date.now();
+  for (const [k, v] of idempotencyCache.entries()) {
+    if (v.expiresAt < now) idempotencyCache.delete(k);
+  }
+}, 10 * 60 * 1000).unref();
+
 async function generateOrderNumber() {
   const year = new Date().getFullYear();
   const count = await prisma.order.count({
@@ -29,18 +57,31 @@ exports.getCheckout = async (req, res) => {
   const taxAmount = subtotal * 0.22;
   const total = subtotal + taxAmount;
 
+  const idempotencyKey = require('crypto').randomUUID();
+
   res.render('shop/checkout', {
     cart,
     addresses,
     totals: { subtotal, taxAmount, total, shippingCost: 0 },
     stripePublicKey: process.env.STRIPE_PUBLISHABLE_KEY,
     title: 'Checkout',
+    idempotencyKey,
   });
 };
 
 // POST /shop/checkout  — crea Stripe PaymentIntent e ordine PENDING
 exports.postCheckout = async (req, res) => {
   const { addressId, notes, paymentMethod = 'STRIPE' } = req.body;
+
+  // Idempotency: blocca double-submit (5 min TTL)
+  const idempotencyKey = req.body.idempotencyKey || req.get('idempotency-key');
+  if (idempotencyKey) {
+    const hit = idempotencyGet(idempotencyKey);
+    if (hit) {
+      // Duplicato: rispondi con lo stesso risultato senza creare un nuovo ordine.
+      return res.redirect(`/account/orders/${hit.orderId}?idempotent=1`);
+    }
+  }
 
   const cart = await prisma.cart.findUnique({
     where: { userId: req.user.id },
@@ -108,6 +149,9 @@ exports.postCheckout = async (req, res) => {
     },
     include: { items: true, company: true },
   });
+
+  // Registra idempotency key dopo creazione ordine
+  if (idempotencyKey) idempotencySet(idempotencyKey, order.id);
 
   if (paymentMethod === 'BANK_TRANSFER') {
     // Per bonifico: finalize atomico (status + stock) e post-processing (email/cart clear).
