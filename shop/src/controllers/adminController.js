@@ -1,6 +1,7 @@
 const prisma = require('../config/database');
 const emailUtil = require('../utils/email');
 const { logAudit } = require('../utils/audit');
+const { COMPANY_STATUSES, MAX_LEN } = require('../config/constants');
 
 // GET /admin  — dashboard
 exports.getDashboard = async (req, res) => {
@@ -290,10 +291,22 @@ exports.getCompanies = async (req, res) => {
 
 exports.updateCompanyStatus = async (req, res) => {
   const { status, notes } = req.body;
+
+  // Validazione enum stato company
+  if (!COMPANY_STATUSES.includes(status)) {
+    return res.status(400).render('error', {
+      message: `Stato company non valido. Ammessi: ${COMPANY_STATUSES.join(', ')}`,
+      code: 400,
+    });
+  }
+
+  // Clamp free-text notes a MAX_LEN.companyNotes
+  const safeNotes = notes ? String(notes).slice(0, MAX_LEN.companyNotes) : undefined;
+
   const prev = await prisma.company.findUnique({ where: { id: req.params.id }, select: { status: true } });
   const company = await prisma.company.update({
     where: { id: req.params.id },
-    data: { status, notes: notes || undefined },
+    data: { status, notes: safeNotes },
     include: { users: true },
   });
 
@@ -308,7 +321,7 @@ exports.updateCompanyStatus = async (req, res) => {
     action: `COMPANY_${status}`,
     entityType: 'Company',
     entityId: company.id,
-    metadata: { from: prev?.status, to: company.status, companyName: company.name, notes: notes || null },
+    metadata: { from: prev?.status, to: company.status, companyName: company.name, notes: safeNotes || null },
   });
 
   if (req.accepts('json')) return res.json({ ok: true, status: company.status });
