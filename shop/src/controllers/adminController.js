@@ -1,6 +1,7 @@
 const prisma = require('../config/database');
 const emailUtil = require('../utils/email');
 const { logAudit } = require('../utils/audit');
+const { logEmailFailure } = require('../utils/emailLogger');
 const { COMPANY_STATUSES, MAX_LEN, ORDER_STATUSES, ORDER_STATUS_TRANSITIONS } = require('../config/constants');
 
 // GET /admin  — dashboard
@@ -345,7 +346,13 @@ exports.updateCompanyStatus = async (req, res) => {
   // Se approvata → notifica tutti gli utenti dell'azienda
   if (status === 'APPROVED') {
     for (const user of company.users) {
-      await emailUtil.sendCompanyApproved(user).catch(() => {});
+      await emailUtil.sendCompanyApproved(user).catch((err) => logEmailFailure({
+        to: user.email,
+        subject: 'Account approvato',
+        templateName: 'sendCompanyApproved',
+        err,
+        context: { userId: user.id, companyId: user.companyId },
+      }));
     }
   }
 
