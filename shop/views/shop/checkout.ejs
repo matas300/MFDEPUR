@@ -14,8 +14,9 @@
 
   <h1 class="page-title">Checkout</h1>
 
-  <% if (typeof error !== 'undefined' && error) { %>
-    <div class="alert alert-danger"><%= error %></div>
+  <% const _hasFormError = typeof error !== 'undefined' && !!error; %>
+  <% if (_hasFormError) { %>
+    <div class="alert alert-danger" id="form-errors" role="alert"><%= error %></div>
   <% } %>
 
   <div class="checkout-layout">
@@ -45,25 +46,25 @@
             <div class="form-row">
               <div class="form-group">
                 <label>Etichetta (es. Sede, Magazzino)</label>
-                <input type="text" name="label" class="form-control" placeholder="Sede principale">
+                <input type="text" name="label" class="form-control" placeholder="Sede principale" aria-invalid="false"<% if (_hasFormError) { %> aria-describedby="form-errors"<% } %>>
               </div>
             </div>
             <div class="form-group">
               <label>Indirizzo *</label>
-              <input type="text" name="street" class="form-control" placeholder="Via Roma 1">
+              <input type="text" name="street" class="form-control" placeholder="Via Roma 1" aria-invalid="false"<% if (_hasFormError) { %> aria-describedby="form-errors"<% } %>>
             </div>
             <div class="form-row">
               <div class="form-group">
                 <label>Città *</label>
-                <input type="text" name="city" class="form-control">
+                <input type="text" name="city" class="form-control" aria-invalid="false"<% if (_hasFormError) { %> aria-describedby="form-errors"<% } %>>
               </div>
               <div class="form-group">
                 <label>Provincia *</label>
-                <input type="text" name="province" class="form-control" maxlength="2">
+                <input type="text" name="province" class="form-control" maxlength="2" aria-invalid="false"<% if (_hasFormError) { %> aria-describedby="form-errors"<% } %>>
               </div>
               <div class="form-group">
                 <label>CAP *</label>
-                <input type="text" name="postalCode" class="form-control" maxlength="5" inputmode="numeric" data-validate="cap">
+                <input type="text" name="postalCode" class="form-control" maxlength="5" inputmode="numeric" data-validate="cap" aria-invalid="false"<% if (_hasFormError) { %> aria-describedby="form-errors"<% } %>>
               </div>
             </div>
             <div class="form-group">
@@ -114,8 +115,14 @@
 
         <div id="checkout-error" class="alert alert-danger" style="display:none"></div>
 
+        <p class="checkout-3ds-hint" style="color:#666; font-size:13px; margin:12px 0;">
+          <span aria-hidden="true">🔒</span>
+          Pagamento sicuro tramite Stripe. La tua banca potrebbe chiederti un'autenticazione
+          aggiuntiva (codice SMS o app 3D Secure) per confermare il pagamento.
+        </p>
+
         <button type="submit" class="btn btn-primary btn-block btn-lg" id="submit-btn">
-          Conferma e paga &euro;<%= totals.total.toFixed(2) %>
+          Conferma e paga <%= formatEuro(totals.total) %>
         </button>
         <p style="font-size:0.8rem;color:var(--text-muted);margin-top:0.5rem;text-align:center">
           Pagamento sicuro. Cliccando "Conferma" accetti le condizioni di acquisto.
@@ -129,26 +136,26 @@
       <% cart.items.forEach(item => { %>
         <div class="checkout-item">
           <span><%= item.product.name %> &times; <%= item.quantity %> <%= item.product.unit %></span>
-          <span>&euro;<%= (Number(item.product.price) * item.quantity).toFixed(2) %></span>
+          <span><%= formatEuro((Number(item.product.price) * item.quantity)) %></span>
         </div>
       <% }) %>
       <div class="checkout-divider"></div>
       <div class="checkout-item">
         <span>Subtotale</span>
-        <span>&euro;<%= totals.subtotal.toFixed(2) %></span>
+        <span><%= formatEuro(totals.subtotal) %></span>
       </div>
       <div class="checkout-item">
         <span>IVA 22%</span>
-        <span>&euro;<%= totals.taxAmount.toFixed(2) %></span>
+        <span><%= formatEuro(totals.taxAmount) %></span>
       </div>
       <div class="checkout-item">
         <span>Spedizione</span>
-        <span><%= totals.shippingCost === 0 ? 'Gratuita' : '€' + totals.shippingCost.toFixed(2) %></span>
+        <span><%= totals.shippingCost === 0 ? 'Gratuita' : formatEuro(totals.shippingCost) %></span>
       </div>
       <div class="checkout-divider"></div>
       <div class="checkout-total">
         <span>Totale (IVA incl.)</span>
-        <span>&euro;<%= totals.total.toFixed(2) %></span>
+        <span><%= formatEuro(totals.total) %></span>
       </div>
 
       <div style="margin-top:1.5rem;font-size:0.8rem;color:var(--text-muted)">

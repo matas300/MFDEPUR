@@ -8,7 +8,7 @@
   </div>
   <div class="stat-card">
     <div class="stat-label">Fatturato totale</div>
-    <div class="stat-value">&euro;<%= parseFloat(stats.revenue || 0).toFixed(2) %></div>
+    <div class="stat-value"><%= formatEuro(stats.revenue || 0) %></div>
   </div>
   <div class="stat-card">
     <div class="stat-label">Ordini questo mese</div>
@@ -16,7 +16,7 @@
   </div>
   <div class="stat-card">
     <div class="stat-label">Fatturato mese</div>
-    <div class="stat-value">&euro;<%= parseFloat(stats.revenueMonth || 0).toFixed(2) %></div>
+    <div class="stat-value"><%= formatEuro(stats.revenueMonth || 0) %></div>
   </div>
   <div class="stat-card <%= stats.pendingCompanies > 0 ? 'stat-card--alert' : '' %>">
     <div class="stat-label">Aziende in attesa</div>
@@ -110,12 +110,12 @@
     <table class="data-table">
       <thead>
         <tr>
-          <th>Ordine</th>
-          <th>Azienda</th>
-          <th>Data</th>
-          <th>Totale</th>
-          <th>Stato</th>
-          <th></th>
+          <th scope="col">Ordine</th>
+          <th scope="col">Azienda</th>
+          <th scope="col">Data</th>
+          <th scope="col">Totale</th>
+          <th scope="col">Stato</th>
+          <th scope="col"></th>
         </tr>
       </thead>
       <tbody>
@@ -124,7 +124,7 @@
             <td><strong><%= order.orderNumber %></strong></td>
             <td><%= order.company.name %></td>
             <td><%= new Date(order.createdAt).toLocaleDateString('it-IT') %></td>
-            <td>&euro;<%= parseFloat(order.total).toFixed(2) %></td>
+            <td><%= formatEuro(order.total) %></td>
             <td><span class="order-status order-status--<%= order.status.toLowerCase() %>"><%= order.status %></span></td>
             <td><a href="/admin/orders/<%= order.id %>" class="btn btn-outline btn-sm">Dettaglio</a></td>
           </tr>

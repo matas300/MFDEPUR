@@ -18,12 +18,12 @@
       <table class="data-table">
         <thead>
           <tr>
-            <th>Numero ordine</th>
-            <th>Data</th>
-            <th>Articoli</th>
-            <th>Totale</th>
-            <th>Stato</th>
-            <th></th>
+            <th scope="col">Numero ordine</th>
+            <th scope="col">Data</th>
+            <th scope="col">Articoli</th>
+            <th scope="col">Totale</th>
+            <th scope="col">Stato</th>
+            <th scope="col"></th>
           </tr>
         </thead>
         <tbody>
@@ -32,7 +32,7 @@
               <td><strong><%= order.orderNumber %></strong></td>
               <td><%= new Date(order.createdAt).toLocaleDateString('it-IT') %></td>
               <td><%= order.items.length %> articolo<%= order.items.length !== 1 ? 'i' : '' %></td>
-              <td><strong>&euro;<%= parseFloat(order.total).toFixed(2) %></strong></td>
+              <td><strong><%= formatEuro(order.total) %></strong></td>
               <td><span class="order-status order-status--<%= order.status.toLowerCase() %>"><%= order.status %></span></td>
               <td><a href="/account/orders/<%= order.id %>" class="btn btn-outline btn-sm">Dettaglio</a></td>
             </tr>

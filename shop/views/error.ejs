@@ -18,6 +18,14 @@ const _e = _map[code] || _map[500]; -%>
     <a href="/shop" class="btn btn-primary">Vai al catalogo</a>
     <a href="/" class="btn btn-outline">Torna alla home</a>
   </div>
+  <% if (typeof errorId !== 'undefined' && errorId) { %>
+    <p class="error-id" style="color:#888; font-size:12px; font-family:monospace; margin-top:24px;">
+      Codice errore: <%= errorId %>
+    </p>
+    <p style="color:#666; font-size:13px;">
+      Se contatti il supporto, comunica questo codice per aiutarci a risalire al problema.
+    </p>
+  <% } %>
 </div>
 
 <%- include('partials/_footer') %>

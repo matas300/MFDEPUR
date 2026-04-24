@@ -1,0 +1,8 @@
+# MFDEPUR Shop — B2B
+
+User-agent: *
+Disallow: /account/
+Disallow: /admin/
+Disallow: /auth/
+
+Sitemap: https://shop.mfdepur.com/sitemap.xml

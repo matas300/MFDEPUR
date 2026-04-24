@@ -8,9 +8,11 @@
       <p>Area riservata aziende</p>
     </div>
 
-    <% if (typeof errors !== 'undefined' && errors.length) { %>
-      <div class="alert alert-danger">
-        <% errors.forEach(e => { %><div><%= e.msg %></div><% }) %>
+    <% const _errs = (typeof errors !== 'undefined' && Array.isArray(errors)) ? errors : []; %>
+    <% const _hasErr = (field) => _errs.some(e => e && (e.param === field || e.path === field)); %>
+    <% if (_errs.length) { %>
+      <div class="alert alert-danger" id="form-errors" role="alert">
+        <% _errs.forEach(e => { %><div><%= e.msg %></div><% }) %>
       </div>
     <% } %>
     <% if (typeof info !== 'undefined' && info) { %>
@@ -23,12 +25,16 @@
         <label for="email">Email aziendale</label>
         <input type="email" id="email" name="email" class="form-control"
                value="<%= typeof body !== 'undefined' ? body.email || '' : '' %>"
-               required autocomplete="email">
+               required autocomplete="email" inputmode="email"
+               aria-invalid="<%= _hasErr('email') ? 'true' : 'false' %>"
+               <% if (_errs.length) { %>aria-describedby="form-errors"<% } %>>
       </div>
       <div class="form-group">
         <label for="password">Password</label>
         <input type="password" id="password" name="password" class="form-control"
-               required autocomplete="current-password">
+               required autocomplete="current-password"
+               aria-invalid="<%= _hasErr('password') ? 'true' : 'false' %>"
+               <% if (_errs.length) { %>aria-describedby="form-errors"<% } %>>
       </div>
       <button type="submit" class="btn btn-primary btn-block">Accedi</button>
     </form>

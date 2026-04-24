@@ -1,13 +1,50 @@
 'use strict';
 
+// ── Intl formatter client 'it-IT' — simmetrico a src/utils/format.js lato server ──
+const fmtEuro = new Intl.NumberFormat('it-IT', {
+  style: 'currency', currency: 'EUR',
+  minimumFractionDigits: 2, maximumFractionDigits: 2,
+});
+const fmtNumber = new Intl.NumberFormat('it-IT', {
+  minimumFractionDigits: 0, maximumFractionDigits: 2,
+});
+function formatEuro(v) {
+  const n = typeof v === 'number' ? v : parseFloat(v) || 0;
+  return fmtEuro.format(n);
+}
+function formatNumber(v) {
+  const n = typeof v === 'number' ? v : parseFloat(v) || 0;
+  return fmtNumber.format(n);
+}
+
 // ── GuestCart — carrello locale per utenti non registrati ─────────────────────
 
+const GUEST_CART_KEY = 'mfdepur_cart';
+
+// Lettura robusta del carrello guest da localStorage.
+// Fallback: se il JSON è corrotto o non è un array, reset + toast di avviso.
+function readGuestCart() {
+  try {
+    const raw = localStorage.getItem(GUEST_CART_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) throw new Error('not an array');
+    return parsed;
+  } catch (err) {
+    console.warn('[guest-cart] localStorage corrotto, reset:', err && err.message);
+    try { localStorage.removeItem(GUEST_CART_KEY); } catch (_) { /* ignore */ }
+    if (typeof showToast === 'function') {
+      showToast('Carrello ripristinato (dati locali corrotti).', 'error');
+    }
+    return [];
+  }
+}
+
 const GuestCart = {
-  KEY: 'mfdepur_cart',
+  KEY: GUEST_CART_KEY,
 
   get() {
-    try { return JSON.parse(localStorage.getItem(this.KEY) || '[]'); }
-    catch { return []; }
+    return readGuestCart();
   },
 
   save(items) {
@@ -323,7 +360,7 @@ document.addEventListener('change', async (e) => {
     const row = input.closest('.cart-row');
     if (row) {
       const rowTotal = row.querySelector('.cart-row-total');
-      if (rowTotal) rowTotal.textContent = '€' + (price * qty).toFixed(2);
+      if (rowTotal) rowTotal.textContent = formatEuro(price * qty);
     }
     recalcCartSummary();
   } catch (err) {
@@ -342,9 +379,9 @@ function recalcCartSummary() {
   const elSub = document.getElementById('cart-subtotal');
   const elTax = document.getElementById('cart-tax');
   const elTotal = document.getElementById('cart-total');
-  if (elSub) elSub.textContent = '€' + subtotal.toFixed(2);
-  if (elTax) elTax.textContent = '€' + tax.toFixed(2);
-  if (elTotal) elTotal.textContent = '€' + (subtotal + tax).toFixed(2);
+  if (elSub) elSub.textContent = formatEuro(subtotal);
+  if (elTax) elTax.textContent = formatEuro(tax);
+  if (elTotal) elTotal.textContent = formatEuro(subtotal + tax);
 }
 
 // ── Cart — remove item (utente loggato) ──────────────────────────────────────
@@ -402,7 +439,7 @@ document.addEventListener('click', async (e) => {
             : ''}
           <div><strong>${item.name}</strong></div>
         </td>
-        <td>&euro;${item.price.toFixed(2)}/${item.unit}</td>
+        <td>${formatEuro(item.price)}/${item.unit}</td>
         <td>
           <div class="qty-control qty-control--sm">
             <button type="button" class="qty-btn guest-qty-btn" data-action="minus" data-guest="${item.id}" data-min="${item.minQty}">−</button>
@@ -412,7 +449,7 @@ document.addEventListener('click', async (e) => {
             <button type="button" class="qty-btn guest-qty-btn" data-action="plus" data-guest="${item.id}">+</button>
           </div>
         </td>
-        <td class="cart-row-total">&euro;${(item.price * item.qty).toFixed(2)}</td>
+        <td class="cart-row-total">${formatEuro(item.price * item.qty)}</td>
         <td>
           <button class="btn-icon guest-remove-btn" data-guest="${item.id}" title="Rimuovi">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
@@ -436,10 +473,10 @@ document.addEventListener('click', async (e) => {
         </div>
         <div class="cart-summary">
           <h3>Riepilogo ordine</h3>
-          <div class="cart-summary-row"><span>Subtotale</span><span>&euro;${subtotal.toFixed(2)}</span></div>
-          <div class="cart-summary-row"><span>IVA (22%)</span><span>&euro;${tax.toFixed(2)}</span></div>
+          <div class="cart-summary-row"><span>Subtotale</span><span>${formatEuro(subtotal)}</span></div>
+          <div class="cart-summary-row"><span>IVA (22%)</span><span>${formatEuro(tax)}</span></div>
           <div class="cart-summary-row"><span>Spedizione</span><span style="color:var(--text-muted)">Calcolata al checkout</span></div>
-          <div class="cart-summary-total"><span>Totale stimato</span><span>&euro;${total.toFixed(2)}</span></div>
+          <div class="cart-summary-total"><span>Totale stimato</span><span>${formatEuro(total)}</span></div>
           <a href="/auth/login?redirect=/shop/cart" class="btn btn-primary btn-block" style="margin-top:1rem">
             <i class="fa-solid fa-right-to-bracket"></i> Accedi per completare l'ordine
           </a>
@@ -486,7 +523,7 @@ document.addEventListener('click', async (e) => {
       const row = input.closest('.cart-row');
       if (row) {
         const rowTotal = row.querySelector('.cart-row-total');
-        if (rowTotal) rowTotal.textContent = '€' + (price * qty).toFixed(2);
+        if (rowTotal) rowTotal.textContent = formatEuro(price * qty);
       }
       // Ricalcola totali
       const items = GuestCart.get();

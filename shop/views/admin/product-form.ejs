@@ -135,7 +135,7 @@
     <div class="card">
       <h3>Immagine principale</h3>
       <% if (isEdit && product.imageUrl) { %>
-        <img src="<%= product.imageUrl %>" alt="" style="width:100%;border-radius:8px;margin-bottom:1rem;object-fit:cover;max-height:200px">
+        <img src="<%= product.imageUrl %>" alt="" loading="lazy" style="width:100%;border-radius:8px;margin-bottom:1rem;object-fit:cover;max-height:200px">
       <% } %>
       <form action="<%= isEdit ? '/admin/products/' + product.id : '/admin/products' %>"
             method="POST" enctype="multipart/form-data" id="image-form">

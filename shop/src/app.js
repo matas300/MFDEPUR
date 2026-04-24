@@ -16,6 +16,7 @@ const {
   csrfErrorHandler,
 } = require('./middleware/csrf');
 const orderCtrl = require('./controllers/orderController');
+const format = require('./utils/format');
 
 const app = express();
 
@@ -93,9 +94,20 @@ app.use(helmet({
         'unpkg.com',
         'cdnjs.cloudflare.com',
       ],
-      // styleSrc: 'unsafe-inline' ancora presente — molti template hanno style="..." inline.
-      // TODO hardening: refactor degli inline style e passaggio a nonce/hash.
-      styleSrc: ["'self'", "'unsafe-inline'", 'fonts.googleapis.com', 'cdnjs.cloudflare.com', 'unpkg.com'],
+      // styleSrc: strict per <style> block. Nessun 'unsafe-inline'.
+      // Nel codice attuale non ci sono <style> inline nei template EJS (verificato
+      // con grep "<style" in views/). Se in futuro servono, aggiungere nonce.
+      styleSrc: [
+        "'self'",
+        (req, res) => `'nonce-${res.locals.cspNonce}'`,
+        'fonts.googleapis.com',
+        'cdnjs.cloudflare.com',
+        'unpkg.com',
+      ],
+      // styleSrcAttr: accetta style="..." inline. Il refactoring dei 207 inline style
+      // è debito tecnico tracciato (CSP-001); questa direttiva mantiene la protezione
+      // rigorosa sui <style> block (più pericolosi) consentendo gli attribute inline.
+      styleSrcAttr: ["'unsafe-inline'"],
       fontSrc: ["'self'", 'fonts.gstatic.com', 'cdnjs.cloudflare.com', 'data:'],
       frameSrc: ['js.stripe.com'],
       imgSrc: ["'self'", 'data:', 'mfdepur.com', 'www.mfdepur.com', 'https:'],
@@ -155,6 +167,11 @@ app.use(injectUser);
 app.use((req, res, next) => {
   res.locals.currentPath = req.path;
   res.locals.baseUrl = process.env.BASE_URL;
+  // Formatter 'it-IT' iniettati come res.locals per uso nei template EJS
+  res.locals.formatEuro = format.formatEuro;
+  res.locals.formatNumber = format.formatNumber;
+  res.locals.formatDate = format.formatDate;
+  res.locals.formatDateTime = format.formatDateTime;
   next();
 });
 
@@ -185,11 +202,17 @@ app.use(observability.errorHandler()); // cattura errori prima del render custom
 
 // ── Error handler ─────────────────────────────────────────────────────────────
 app.use((err, req, res, next) => {
-  console.error(err);
+  // req.id viene da pino-http (M3-α-2). Se per qualche motivo non c'è, fallback a crypto.randomUUID().
+  const errorId = req.id || require('crypto').randomUUID();
+  if (req.log) {
+    req.log.error({ err, errorId }, 'unhandled error');
+  } else {
+    console.error(`[${errorId}]`, err);
+  }
   const code = err.status || 500;
   const message = process.env.NODE_ENV === 'production' ? 'Errore interno del server' : err.message;
-  if (req.accepts('json')) return res.status(code).json({ error: message });
-  res.status(code).render('error', { message, code });
+  if (req.accepts('json')) return res.status(code).json({ error: message, errorId });
+  res.status(code).render('error', { message, code, errorId });
 });
 
 module.exports = app;

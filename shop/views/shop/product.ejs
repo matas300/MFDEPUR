@@ -63,7 +63,7 @@
           </div>
         <% } else { %>
           <div class="product-detail-price">
-            &euro;<%= parseFloat(product.price).toFixed(2) %>
+            <%= formatEuro(product.price) %>
             <small>/<%= product.unit %> &mdash; IVA esclusa</small>
           </div>
 
@@ -137,7 +137,7 @@
               </h3>
               <div class="product-card-footer">
                 <% if (currentUser && currentUser.company && currentUser.company.status === 'APPROVED') { %>
-                  <div class="product-card-price">&euro;<%= parseFloat(p.price).toFixed(2) %><small>/<%= p.unit %></small></div>
+                  <div class="product-card-price"><%= formatEuro(p.price) %><small>/<%= p.unit %></small></div>
                 <% } %>
                 <a href="/shop/product/<%= p.slug %>" class="btn btn-outline btn-sm">Dettaglio</a>
               </div>

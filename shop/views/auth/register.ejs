@@ -7,9 +7,11 @@
       <p>Crea un account per accedere al catalogo e acquistare prodotti MF Depur</p>
     </div>
 
-    <% if (typeof errors !== 'undefined' && errors.length) { %>
-      <div class="alert alert-danger">
-        <% errors.forEach(e => { %><div><%= e.msg %></div><% }) %>
+    <% const _errs = (typeof errors !== 'undefined' && Array.isArray(errors)) ? errors : []; %>
+    <% const _hasErr = (field) => _errs.some(e => e && (e.param === field || e.path === field)); %>
+    <% if (_errs.length) { %>
+      <div class="alert alert-danger" id="form-errors" role="alert">
+        <% _errs.forEach(e => { %><div><%= e.msg %></div><% }) %>
       </div>
     <% } %>
 
@@ -20,37 +22,37 @@
         <div class="form-group">
           <label for="companyName">Ragione sociale *</label>
           <input type="text" id="companyName" name="companyName" class="form-control"
-                 value="<%= typeof body !== 'undefined' ? body.companyName || '' : '' %>" required>
+                 value="<%= typeof body !== 'undefined' ? body.companyName || '' : '' %>" required aria-invalid="<%= _hasErr('companyName') ? 'true' : 'false' %>"<% if (_errs.length) { %> aria-describedby="form-errors"<% } %>>
         </div>
         <div class="form-group">
           <label for="vatNumber">Partita IVA *</label>
           <input type="text" id="vatNumber" name="vatNumber" class="form-control"
                  placeholder="IT12345678901" data-validate="vatIT"
-                 value="<%= typeof body !== 'undefined' ? body.vatNumber || '' : '' %>" required>
+                 value="<%= typeof body !== 'undefined' ? body.vatNumber || '' : '' %>" required aria-invalid="<%= _hasErr('vatNumber') ? 'true' : 'false' %>"<% if (_errs.length) { %> aria-describedby="form-errors"<% } %>>
         </div>
       </div>
       <div class="form-row">
         <div class="form-group">
           <label for="fiscalCode">Codice fiscale</label>
           <input type="text" id="fiscalCode" name="fiscalCode" class="form-control"
-                 value="<%= typeof body !== 'undefined' ? body.fiscalCode || '' : '' %>">
+                 value="<%= typeof body !== 'undefined' ? body.fiscalCode || '' : '' %>" aria-invalid="<%= _hasErr('fiscalCode') ? 'true' : 'false' %>"<% if (_errs.length) { %> aria-describedby="form-errors"<% } %>>
         </div>
         <div class="form-group">
           <label for="phone">Telefono *</label>
-          <input type="tel" id="phone" name="phone" class="form-control" data-validate="phone"
-                 value="<%= typeof body !== 'undefined' ? body.phone || '' : '' %>" required>
+          <input type="tel" id="phone" name="phone" class="form-control" data-validate="phone" inputmode="tel"
+                 value="<%= typeof body !== 'undefined' ? body.phone || '' : '' %>" required aria-invalid="<%= _hasErr('phone') ? 'true' : 'false' %>"<% if (_errs.length) { %> aria-describedby="form-errors"<% } %>>
         </div>
       </div>
       <div class="form-row">
         <div class="form-group">
           <label for="sdiCode">Codice SDI</label>
           <input type="text" id="sdiCode" name="sdiCode" class="form-control" maxlength="7"
-                 value="<%= typeof body !== 'undefined' ? body.sdiCode || '' : '' %>">
+                 value="<%= typeof body !== 'undefined' ? body.sdiCode || '' : '' %>" aria-invalid="<%= _hasErr('sdiCode') ? 'true' : 'false' %>"<% if (_errs.length) { %> aria-describedby="form-errors"<% } %>>
         </div>
         <div class="form-group">
           <label for="pec">PEC</label>
-          <input type="email" id="pec" name="pec" class="form-control"
-                 value="<%= typeof body !== 'undefined' ? body.pec || '' : '' %>">
+          <input type="email" id="pec" name="pec" class="form-control" inputmode="email"
+                 value="<%= typeof body !== 'undefined' ? body.pec || '' : '' %>" aria-invalid="<%= _hasErr('pec') ? 'true' : 'false' %>"<% if (_errs.length) { %> aria-describedby="form-errors"<% } %>>
         </div>
       </div>
 
@@ -59,27 +61,27 @@
         <div class="form-group">
           <label for="firstName">Nome *</label>
           <input type="text" id="firstName" name="firstName" class="form-control"
-                 value="<%= typeof body !== 'undefined' ? body.firstName || '' : '' %>" required>
+                 value="<%= typeof body !== 'undefined' ? body.firstName || '' : '' %>" required aria-invalid="<%= _hasErr('firstName') ? 'true' : 'false' %>"<% if (_errs.length) { %> aria-describedby="form-errors"<% } %>>
         </div>
         <div class="form-group">
           <label for="lastName">Cognome *</label>
           <input type="text" id="lastName" name="lastName" class="form-control"
-                 value="<%= typeof body !== 'undefined' ? body.lastName || '' : '' %>" required>
+                 value="<%= typeof body !== 'undefined' ? body.lastName || '' : '' %>" required aria-invalid="<%= _hasErr('lastName') ? 'true' : 'false' %>"<% if (_errs.length) { %> aria-describedby="form-errors"<% } %>>
         </div>
       </div>
       <div class="form-group">
         <label for="email">Email *</label>
-        <input type="email" id="email" name="email" class="form-control" data-validate="email"
-               value="<%= typeof body !== 'undefined' ? body.email || '' : '' %>" required autocomplete="email">
+        <input type="email" id="email" name="email" class="form-control" data-validate="email" inputmode="email"
+               value="<%= typeof body !== 'undefined' ? body.email || '' : '' %>" required autocomplete="email" aria-invalid="<%= _hasErr('email') ? 'true' : 'false' %>"<% if (_errs.length) { %> aria-describedby="form-errors"<% } %>>
       </div>
       <div class="form-row">
         <div class="form-group">
           <label for="password">Password * <small>(min. 10 caratteri, 1 maiuscola, 1 minuscola, 1 numero)</small></label>
-          <input type="password" id="password" name="password" class="form-control" minlength="10" required>
+          <input type="password" id="password" name="password" class="form-control" minlength="10" required aria-invalid="<%= _hasErr('password') ? 'true' : 'false' %>"<% if (_errs.length) { %> aria-describedby="form-errors"<% } %>>
         </div>
         <div class="form-group">
           <label for="confirmPassword">Conferma password *</label>
-          <input type="password" id="confirmPassword" name="confirmPassword" class="form-control" minlength="10" required>
+          <input type="password" id="confirmPassword" name="confirmPassword" class="form-control" minlength="10" required aria-invalid="<%= _hasErr('confirmPassword') ? 'true' : 'false' %>"<% if (_errs.length) { %> aria-describedby="form-errors"<% } %>>
         </div>
       </div>
 

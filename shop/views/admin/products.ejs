@@ -34,14 +34,14 @@
   <table class="data-table">
     <thead>
       <tr>
-        <th style="width:60px"></th>
-        <th>Nome</th>
-        <th>SKU</th>
-        <th>Categoria</th>
-        <th>Prezzo</th>
-        <th>Stock</th>
-        <th>Attivo</th>
-        <th></th>
+        <th scope="col" style="width:60px"></th>
+        <th scope="col">Nome</th>
+        <th scope="col">SKU</th>
+        <th scope="col">Categoria</th>
+        <th scope="col">Prezzo</th>
+        <th scope="col">Stock</th>
+        <th scope="col">Attivo</th>
+        <th scope="col"></th>
       </tr>
     </thead>
     <tbody>
@@ -49,7 +49,7 @@
         <tr class="<%= !p.isActive ? 'row--disabled' : '' %>">
           <td>
             <% if (p.imageUrl) { %>
-              <img src="<%= p.imageUrl %>" alt="" style="width:48px;height:48px;object-fit:cover;border-radius:4px">
+              <img src="<%= p.imageUrl %>" alt="" loading="lazy" style="width:48px;height:48px;object-fit:cover;border-radius:4px">
             <% } else { %>
               <div style="width:48px;height:48px;background:var(--bg-subtle);border-radius:4px;display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:1.2rem">📦</div>
             <% } %>
@@ -61,7 +61,7 @@
           </td>
           <td><code><%= p.sku %></code></td>
           <td><%= p.category ? p.category.name : '—' %></td>
-          <td>&euro;<%= parseFloat(p.price).toFixed(2) %>/<%= p.unit %></td>
+          <td><%= formatEuro(p.price) %>/<%= p.unit %></td>
           <td>
             <% if (p.stock <= p.lowStockAlert) { %>
               <span style="color:var(--danger)"><strong><%= p.stock %></strong> ⚠️</span>
