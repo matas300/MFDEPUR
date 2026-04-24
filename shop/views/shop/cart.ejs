@@ -80,7 +80,7 @@
                     <br><small style="color:var(--text-muted)">SKU: <%= item.product.sku %></small>
                   </div>
                 </td>
-                <td>&euro;<%= parseFloat(item.product.price).toFixed(2) %>/<%= item.product.unit %></td>
+                <td><%= formatEuro(item.product.price) %>/<%= item.product.unit %></td>
                 <td>
                   <div class="qty-control qty-control--sm">
                     <button type="button" class="qty-btn" data-action="minus" data-item="<%= item.id %>" data-min="<%= item.product.minOrderQty %>">−</button>
@@ -92,7 +92,7 @@
                     <button type="button" class="qty-btn" data-action="plus" data-item="<%= item.id %>">+</button>
                   </div>
                 </td>
-                <td class="cart-row-total">&euro;<%= (parseFloat(item.product.price) * item.quantity).toFixed(2) %></td>
+                <td class="cart-row-total"><%= formatEuro((parseFloat(item.product.price) * item.quantity)) %></td>
                 <td>
                   <button class="btn-icon btn-remove-item" data-item="<%= item.id %>" title="Rimuovi">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
@@ -117,11 +117,11 @@
         <h3>Riepilogo ordine</h3>
         <div class="cart-summary-row">
           <span>Subtotale</span>
-          <span id="cart-subtotal">&euro;<%= totals.subtotal.toFixed(2) %></span>
+          <span id="cart-subtotal"><%= formatEuro(totals.subtotal) %></span>
         </div>
         <div class="cart-summary-row">
           <span>IVA (22%)</span>
-          <span id="cart-tax">&euro;<%= totals.taxAmount.toFixed(2) %></span>
+          <span id="cart-tax"><%= formatEuro(totals.taxAmount) %></span>
         </div>
         <div class="cart-summary-row">
           <span>Spedizione</span>
@@ -129,7 +129,7 @@
         </div>
         <div class="cart-summary-total">
           <span>Totale stimato</span>
-          <span id="cart-total">&euro;<%= totals.total.toFixed(2) %></span>
+          <span id="cart-total"><%= formatEuro(totals.total) %></span>
         </div>
         <a href="/shop/checkout" class="btn btn-primary btn-block">Procedi al checkout</a>
         <p style="font-size:0.8rem;color:var(--text-muted);margin-top:0.75rem;text-align:center">

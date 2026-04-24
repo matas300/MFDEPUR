@@ -159,7 +159,7 @@
                     </a>
                   <% } else { %>
                     <div class="product-card-price">
-                      &euro;<%= parseFloat(product.price).toFixed(2) %>
+                      <%= formatEuro(product.price) %>
                       <small>/<%= product.unit %></small>
                     </div>
                     <% if (product.stock > 0) { %>

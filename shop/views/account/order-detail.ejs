@@ -50,29 +50,29 @@
             <td><strong><%= item.productName %></strong></td>
             <td><code><%= item.productSku %></code></td>
             <td><%= item.quantity %> <%= item.unit %></td>
-            <td>&euro;<%= parseFloat(item.unitPrice).toFixed(2) %></td>
-            <td>&euro;<%= parseFloat(item.total).toFixed(2) %></td>
+            <td><%= formatEuro(item.unitPrice) %></td>
+            <td><%= formatEuro(item.total) %></td>
           </tr>
         <% }) %>
       </tbody>
       <tfoot>
         <tr>
           <td colspan="4" style="text-align:right">Subtotale</td>
-          <td>&euro;<%= parseFloat(order.subtotal).toFixed(2) %></td>
+          <td><%= formatEuro(order.subtotal) %></td>
         </tr>
         <tr>
           <td colspan="4" style="text-align:right">IVA 22%</td>
-          <td>&euro;<%= parseFloat(order.taxAmount).toFixed(2) %></td>
+          <td><%= formatEuro(order.taxAmount) %></td>
         </tr>
         <% if (parseFloat(order.shippingCost) > 0) { %>
           <tr>
             <td colspan="4" style="text-align:right">Spedizione</td>
-            <td>&euro;<%= parseFloat(order.shippingCost).toFixed(2) %></td>
+            <td><%= formatEuro(order.shippingCost) %></td>
           </tr>
         <% } %>
         <tr class="order-total-row">
           <td colspan="4" style="text-align:right"><strong>Totale</strong></td>
-          <td><strong>&euro;<%= parseFloat(order.total).toFixed(2) %></strong></td>
+          <td><strong><%= formatEuro(order.total) %></strong></td>
         </tr>
       </tfoot>
     </table>

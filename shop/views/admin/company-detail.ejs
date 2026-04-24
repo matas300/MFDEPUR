@@ -57,7 +57,7 @@
               <tr>
                 <td><%= o.orderNumber %></td>
                 <td><%= new Date(o.createdAt).toLocaleDateString('it-IT') %></td>
-                <td>&euro;<%= parseFloat(o.total).toFixed(2) %></td>
+                <td><%= formatEuro(o.total) %></td>
                 <td><span class="order-status order-status--<%= o.status.toLowerCase() %>"><%= o.status %></span></td>
                 <td><a href="/admin/orders/<%= o.id %>" class="btn btn-outline btn-sm">Apri</a></td>
               </tr>

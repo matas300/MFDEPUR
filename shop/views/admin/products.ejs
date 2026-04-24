@@ -61,7 +61,7 @@
           </td>
           <td><code><%= p.sku %></code></td>
           <td><%= p.category ? p.category.name : '—' %></td>
-          <td>&euro;<%= parseFloat(p.price).toFixed(2) %>/<%= p.unit %></td>
+          <td><%= formatEuro(p.price) %>/<%= p.unit %></td>
           <td>
             <% if (p.stock <= p.lowStockAlert) { %>
               <span style="color:var(--danger)"><strong><%= p.stock %></strong> ⚠️</span>

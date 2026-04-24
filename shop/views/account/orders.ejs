@@ -32,7 +32,7 @@
               <td><strong><%= order.orderNumber %></strong></td>
               <td><%= new Date(order.createdAt).toLocaleDateString('it-IT') %></td>
               <td><%= order.items.length %> articolo<%= order.items.length !== 1 ? 'i' : '' %></td>
-              <td><strong>&euro;<%= parseFloat(order.total).toFixed(2) %></strong></td>
+              <td><strong><%= formatEuro(order.total) %></strong></td>
               <td><span class="order-status order-status--<%= order.status.toLowerCase() %>"><%= order.status %></span></td>
               <td><a href="/account/orders/<%= order.id %>" class="btn btn-outline btn-sm">Dettaglio</a></td>
             </tr>

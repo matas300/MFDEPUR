@@ -116,7 +116,7 @@
         <div id="checkout-error" class="alert alert-danger" style="display:none"></div>
 
         <button type="submit" class="btn btn-primary btn-block btn-lg" id="submit-btn">
-          Conferma e paga &euro;<%= totals.total.toFixed(2) %>
+          Conferma e paga <%= formatEuro(totals.total) %>
         </button>
         <p style="font-size:0.8rem;color:var(--text-muted);margin-top:0.5rem;text-align:center">
           Pagamento sicuro. Cliccando "Conferma" accetti le condizioni di acquisto.
@@ -130,26 +130,26 @@
       <% cart.items.forEach(item => { %>
         <div class="checkout-item">
           <span><%= item.product.name %> &times; <%= item.quantity %> <%= item.product.unit %></span>
-          <span>&euro;<%= (Number(item.product.price) * item.quantity).toFixed(2) %></span>
+          <span><%= formatEuro((Number(item.product.price) * item.quantity)) %></span>
         </div>
       <% }) %>
       <div class="checkout-divider"></div>
       <div class="checkout-item">
         <span>Subtotale</span>
-        <span>&euro;<%= totals.subtotal.toFixed(2) %></span>
+        <span><%= formatEuro(totals.subtotal) %></span>
       </div>
       <div class="checkout-item">
         <span>IVA 22%</span>
-        <span>&euro;<%= totals.taxAmount.toFixed(2) %></span>
+        <span><%= formatEuro(totals.taxAmount) %></span>
       </div>
       <div class="checkout-item">
         <span>Spedizione</span>
-        <span><%= totals.shippingCost === 0 ? 'Gratuita' : '€' + totals.shippingCost.toFixed(2) %></span>
+        <span><%= totals.shippingCost === 0 ? 'Gratuita' : formatEuro(totals.shippingCost) %></span>
       </div>
       <div class="checkout-divider"></div>
       <div class="checkout-total">
         <span>Totale (IVA incl.)</span>
-        <span>&euro;<%= totals.total.toFixed(2) %></span>
+        <span><%= formatEuro(totals.total) %></span>
       </div>
 
       <div style="margin-top:1.5rem;font-size:0.8rem;color:var(--text-muted)">
