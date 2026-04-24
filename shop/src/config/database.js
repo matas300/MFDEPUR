@@ -1,7 +1,8 @@
 const { PrismaClient } = require('@prisma/client');
 
+const isProd = process.env.NODE_ENV === 'production';
 const prisma = new PrismaClient({
-  log: process.env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error'],
+  log: isProd ? ['warn', 'error'] : ['query', 'warn', 'error'],
 });
 
 // Middleware per gestire campi JSON (features, images) con SQLite
