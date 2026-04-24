@@ -1,0 +1,9 @@
+node_modules/
+prisma/migrations/
+prisma/*.db
+prisma/*.db-*
+uploads/
+coverage/
+public/
+views/
+*.md

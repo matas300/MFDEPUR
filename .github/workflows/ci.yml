@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [master]
+  push:
+    branches: [master]
+
+jobs:
+  lint-and-test:
+    name: Lint + Test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: shop
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: shop/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Prisma generate
+        run: npx prisma generate
+        env:
+          DATABASE_URL: file:./test.db
+
+      - name: Test
+        run: npm test
+        env:
+          NODE_ENV: test
+          JWT_SECRET: ci_jwt_secret_32chars_xxxxxxxxxxxxx
+          JWT_REFRESH_SECRET: ci_jwt_refresh_secret_32chars_xxx
+          JWT_EXPIRES_IN: 15m
+          JWT_REFRESH_EXPIRES_IN: 7d
+          CSRF_SECRET: ci_csrf_secret_32chars_xxxxxxxxxx
+          STRIPE_SECRET_KEY: sk_test_ci
+          STRIPE_PUBLISHABLE_KEY: pk_test_ci
+          STRIPE_WEBHOOK_SECRET: whsec_test_ci
+          DATABASE_URL: file:./test.db
+          BASE_URL: http://localhost
