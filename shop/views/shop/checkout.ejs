@@ -14,8 +14,9 @@
 
   <h1 class="page-title">Checkout</h1>
 
-  <% if (typeof error !== 'undefined' && error) { %>
-    <div class="alert alert-danger"><%= error %></div>
+  <% const _hasFormError = typeof error !== 'undefined' && !!error; %>
+  <% if (_hasFormError) { %>
+    <div class="alert alert-danger" id="form-errors" role="alert"><%= error %></div>
   <% } %>
 
   <div class="checkout-layout">
@@ -45,25 +46,25 @@
             <div class="form-row">
               <div class="form-group">
                 <label>Etichetta (es. Sede, Magazzino)</label>
-                <input type="text" name="label" class="form-control" placeholder="Sede principale">
+                <input type="text" name="label" class="form-control" placeholder="Sede principale" aria-invalid="false"<% if (_hasFormError) { %> aria-describedby="form-errors"<% } %>>
               </div>
             </div>
             <div class="form-group">
               <label>Indirizzo *</label>
-              <input type="text" name="street" class="form-control" placeholder="Via Roma 1">
+              <input type="text" name="street" class="form-control" placeholder="Via Roma 1" aria-invalid="false"<% if (_hasFormError) { %> aria-describedby="form-errors"<% } %>>
             </div>
             <div class="form-row">
               <div class="form-group">
                 <label>Città *</label>
-                <input type="text" name="city" class="form-control">
+                <input type="text" name="city" class="form-control" aria-invalid="false"<% if (_hasFormError) { %> aria-describedby="form-errors"<% } %>>
               </div>
               <div class="form-group">
                 <label>Provincia *</label>
-                <input type="text" name="province" class="form-control" maxlength="2">
+                <input type="text" name="province" class="form-control" maxlength="2" aria-invalid="false"<% if (_hasFormError) { %> aria-describedby="form-errors"<% } %>>
               </div>
               <div class="form-group">
                 <label>CAP *</label>
-                <input type="text" name="postalCode" class="form-control" maxlength="5" inputmode="numeric" data-validate="cap">
+                <input type="text" name="postalCode" class="form-control" maxlength="5" inputmode="numeric" data-validate="cap" aria-invalid="false"<% if (_hasFormError) { %> aria-describedby="form-errors"<% } %>>
               </div>
             </div>
             <div class="form-group">

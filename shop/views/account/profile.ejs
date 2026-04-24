@@ -15,23 +15,23 @@
         <div class="form-group">
           <label for="firstName">Nome</label>
           <input type="text" id="firstName" name="firstName" class="form-control"
-                 value="<%= currentUser.firstName %>" required>
+                 value="<%= currentUser.firstName %>" required aria-invalid="false">
         </div>
         <div class="form-group">
           <label for="lastName">Cognome</label>
           <input type="text" id="lastName" name="lastName" class="form-control"
-                 value="<%= currentUser.lastName %>" required>
+                 value="<%= currentUser.lastName %>" required aria-invalid="false">
         </div>
       </div>
       <div class="form-group">
         <label for="email">Email</label>
-        <input type="email" class="form-control" value="<%= currentUser.email %>" disabled>
+        <input type="email" class="form-control" value="<%= currentUser.email %>" disabled inputmode="email" aria-invalid="false">
         <small style="color:var(--text-muted)">L'email non può essere modificata. Contatta il supporto per cambiarla.</small>
       </div>
       <div class="form-group">
         <label for="phone">Telefono</label>
         <input type="tel" id="phone" name="phone" class="form-control"
-               value="<%= currentUser.phone || '' %>">
+               value="<%= currentUser.phone || '' %>" inputmode="tel" aria-invalid="false">
       </div>
       <button type="submit" class="btn btn-primary">Salva modifiche</button>
     </form>
