@@ -4,6 +4,9 @@ const path = require('path');
 const helmet = require('helmet');
 const cookieParser = require('cookie-parser');
 const rateLimit = require('express-rate-limit');
+const compression = require('compression');
+const pinoHttp = require('pino-http');
+const logger = require('./utils/logger');
 const { injectUser } = require('./middleware/auth');
 const cspNonce = require('./middleware/nonce');
 const {
@@ -20,6 +23,23 @@ const observability = require('./utils/observability');
 app.use(observability.requestHandler()); // no-op se Sentry disabilitato
 
 const IS_PROD = process.env.NODE_ENV === 'production';
+
+// ── HTTP request logging strutturato (correlation-id via req.id) ──────────────
+// Deve stare PRIMA del mount /stripe/webhook così tutti i request (anche il
+// webhook) vengono loggati. `pino-http` genera `req.id` (UUID) a ogni request.
+app.use(pinoHttp({
+  logger,
+  customProps: () => ({ env: process.env.NODE_ENV || 'development' }),
+  serializers: {
+    req: (req) => ({
+      id: req.id,
+      method: req.method,
+      url: req.url,
+      remoteAddress: req.remoteAddress,
+    }),
+    res: (res) => ({ statusCode: res.statusCode }),
+  },
+}));
 
 // ── Trust proxy in prod (reverse proxy Nginx/Cloudflare/Hostinger) ────────────
 // Necessario per req.secure, req.ip, cookie Secure e rate limit per-IP.
@@ -42,6 +62,19 @@ app.post('/stripe/webhook',
   (req, res, next) => { req.rawBody = req.body; next(); },
   orderCtrl.stripeWebhook
 );
+
+// ── Compression ───────────────────────────────────────────────────────────────
+// DOPO il webhook Stripe (rawBody non va compresso in ingresso; in uscita il
+// webhook risponde con piccolo JSON, non serve compressione). PRIMA di Helmet.
+app.use(compression({
+  // Non comprimere risposte sotto 1KB (overhead > benefit)
+  threshold: 1024,
+  // Filter: skippa se il client lo richiede
+  filter: (req, res) => {
+    if (req.headers['x-no-compression']) return false;
+    return compression.filter(req, res);
+  },
+}));
 
 // ── Middleware ────────────────────────────────────────────────────────────────
 // Nonce per CSP: deve stare PRIMA di helmet così la direttiva scriptSrc può leggerlo
@@ -79,6 +112,9 @@ app.use(helmet({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
+
+// ── Health endpoints (no auth, no CSRF: montati prima di ensureCsrfSession) ───
+app.use('/', require('./routes/health'));
 
 // ── CSRF protection (double-submit cookie) ────────────────────────────────────
 // Escluso da /stripe/webhook (montato prima di questo middleware)
