@@ -115,6 +115,12 @@
 
         <div id="checkout-error" class="alert alert-danger" style="display:none"></div>
 
+        <p class="checkout-3ds-hint" style="color:#666; font-size:13px; margin:12px 0;">
+          <span aria-hidden="true">🔒</span>
+          Pagamento sicuro tramite Stripe. La tua banca potrebbe chiederti un'autenticazione
+          aggiuntiva (codice SMS o app 3D Secure) per confermare il pagamento.
+        </p>
+
         <button type="submit" class="btn btn-primary btn-block btn-lg" id="submit-btn">
           Conferma e paga <%= formatEuro(totals.total) %>
         </button>
