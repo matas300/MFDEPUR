@@ -18,9 +18,11 @@
   - `14-production-ready.md` (25 findings · NOT-READY)
 - **Fase 3 — Master Document:** ✅ completata (99-MASTER.md)
 - **M0 — Quick wins & safety net:** ✅ **merged in master** (18 commit)
-- **M1 — Stability & concurrency:** ✅ **merged in master** (17 commit, 10/10 task coperti — 8 implementati + 2 già chiusi in M0). Include: asyncHandler+wrap routes, graceful shutdown SIGTERM+server.close+timeout30s, unhandled→shutdown, Sentry opt-in, `$transaction` stock/ordine, idempotency checkout 5min, Stripe webhook retry-aware, EmailFailureLog + logger strutturato.
+- **M1 — Stability & concurrency:** ✅ **merged in master** (17 commit)
+- **M4 — Test & Code Quality:** ✅ **merged in master** (13 commit). Include: ESLint 9 + Prettier + Vitest 2 + Supertest 7 + coverage-v8, helpers DB/app, 17 test verdi (unit: asyncHandler/constants/env; integration: auth/rbac IDOR), CI GitHub Actions (lint+test su PR/push master), README root. Soglie coverage baseline 15% (da alzare in iterazioni successive).
 - **Follow-up M1 da M7:** webhook Stripe duplicato può re-inviare email (dedupe con queue)
-- **Prossimo:** M2 (fiscal IT — richiede decisione provider SDI) o M3 (prod readiness: Postgres/migrations/health/CI) o M4 (test). M2+M3 parallelizzabili dopo decisione SDI.
+- **Follow-up M4 (bug UX pre-esistente):** `views/auth/login.ejs` legge `errors[]` ma controller passa `error` (string) → utenti non vedono messaggi errore login. Fix minimale da schedulare.
+- **Prossimo:** M2 (fiscal IT — richiede decisione provider SDI) o M3 (Postgres/migrations/health/backup/Docker). M2+M3 parallelizzabili dopo decisione SDI.
 
 ## Conteggio findings per severity
 
