@@ -1,4 +1,3 @@
-import { describe, it, expect } from 'vitest';
 const {
   TAX_RATE,
   ORDER_STATUSES,

@@ -1,4 +1,3 @@
-import { describe, it, expect } from 'vitest';
 const path = require('path');
 const os = require('os');
 const { spawnSync } = require('child_process');

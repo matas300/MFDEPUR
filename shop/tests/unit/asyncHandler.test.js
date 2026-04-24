@@ -1,4 +1,3 @@
-import { describe, it, expect, vi } from 'vitest';
 const asyncHandler = require('../../src/utils/asyncHandler');
 
 describe('asyncHandler', () => {
