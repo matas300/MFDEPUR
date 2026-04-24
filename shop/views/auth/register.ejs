@@ -39,7 +39,7 @@
         </div>
         <div class="form-group">
           <label for="phone">Telefono *</label>
-          <input type="tel" id="phone" name="phone" class="form-control" data-validate="phone"
+          <input type="tel" id="phone" name="phone" class="form-control" data-validate="phone" inputmode="tel"
                  value="<%= typeof body !== 'undefined' ? body.phone || '' : '' %>" required aria-invalid="<%= _hasErr('phone') ? 'true' : 'false' %>"<% if (_errs.length) { %> aria-describedby="form-errors"<% } %>>
         </div>
       </div>
@@ -51,7 +51,7 @@
         </div>
         <div class="form-group">
           <label for="pec">PEC</label>
-          <input type="email" id="pec" name="pec" class="form-control"
+          <input type="email" id="pec" name="pec" class="form-control" inputmode="email"
                  value="<%= typeof body !== 'undefined' ? body.pec || '' : '' %>" aria-invalid="<%= _hasErr('pec') ? 'true' : 'false' %>"<% if (_errs.length) { %> aria-describedby="form-errors"<% } %>>
         </div>
       </div>
@@ -71,7 +71,7 @@
       </div>
       <div class="form-group">
         <label for="email">Email *</label>
-        <input type="email" id="email" name="email" class="form-control" data-validate="email"
+        <input type="email" id="email" name="email" class="form-control" data-validate="email" inputmode="email"
                value="<%= typeof body !== 'undefined' ? body.email || '' : '' %>" required autocomplete="email" aria-invalid="<%= _hasErr('email') ? 'true' : 'false' %>"<% if (_errs.length) { %> aria-describedby="form-errors"<% } %>>
       </div>
       <div class="form-row">
