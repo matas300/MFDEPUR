@@ -19,7 +19,8 @@
 - **Fase 3 — Master Document:** ✅ completata (99-MASTER.md)
 - **M0 — Quick wins & safety net:** ✅ **merged in master** (18 commit)
 - **M1 — Stability & concurrency:** ✅ **merged in master** (17 commit)
-- **M4 — Test & Code Quality:** ✅ **merged in master** (13 commit). Include: ESLint 9 + Prettier + Vitest 2 + Supertest 7 + coverage-v8, helpers DB/app, 17 test verdi (unit: asyncHandler/constants/env; integration: auth/rbac IDOR), CI GitHub Actions (lint+test su PR/push master), README root. Soglie coverage baseline 15% (da alzare in iterazioni successive).
+- **M4 — Test & Code Quality:** ✅ **merged in master** (13 commit)
+- **M3 — Production Readiness:** ✅ **merged in master** (10 commit). Include: pino 9 logger (JSON prod + pretty dev + redact secrets), pino-http correlation-id, compression (skip webhook), /healthz + /health (readiness con DB check), Prisma log warn in prod, migration baseline "init", Dockerfile multi-stage + .dockerignore, PM2 ecosystem.config.js, docs/DEPLOYMENT.md runbook completo. Deferred: M3-bis (Postgres migration reale quando DB managed provisionato).
 - **Follow-up M1 da M7:** webhook Stripe duplicato può re-inviare email (dedupe con queue)
 - **Follow-up M4 (bug UX pre-esistente):** `views/auth/login.ejs` legge `errors[]` ma controller passa `error` (string) → utenti non vedono messaggi errore login. Fix minimale da schedulare.
 - **Prossimo:** M2 (fiscal IT — richiede decisione provider SDI) o M3 (Postgres/migrations/health/backup/Docker). M2+M3 parallelizzabili dopo decisione SDI.
