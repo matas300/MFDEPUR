@@ -93,9 +93,20 @@ app.use(helmet({
         'unpkg.com',
         'cdnjs.cloudflare.com',
       ],
-      // styleSrc: 'unsafe-inline' ancora presente — molti template hanno style="..." inline.
-      // TODO hardening: refactor degli inline style e passaggio a nonce/hash.
-      styleSrc: ["'self'", "'unsafe-inline'", 'fonts.googleapis.com', 'cdnjs.cloudflare.com', 'unpkg.com'],
+      // styleSrc: strict per <style> block. Nessun 'unsafe-inline'.
+      // Nel codice attuale non ci sono <style> inline nei template EJS (verificato
+      // con grep "<style" in views/). Se in futuro servono, aggiungere nonce.
+      styleSrc: [
+        "'self'",
+        (req, res) => `'nonce-${res.locals.cspNonce}'`,
+        'fonts.googleapis.com',
+        'cdnjs.cloudflare.com',
+        'unpkg.com',
+      ],
+      // styleSrcAttr: accetta style="..." inline. Il refactoring dei 207 inline style
+      // è debito tecnico tracciato (CSP-001); questa direttiva mantiene la protezione
+      // rigorosa sui <style> block (più pericolosi) consentendo gli attribute inline.
+      styleSrcAttr: ["'unsafe-inline'"],
       fontSrc: ["'self'", 'fonts.gstatic.com', 'cdnjs.cloudflare.com', 'data:'],
       frameSrc: ['js.stripe.com'],
       imgSrc: ["'self'", 'data:', 'mfdepur.com', 'www.mfdepur.com', 'https:'],
