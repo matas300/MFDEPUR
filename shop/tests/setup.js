@@ -21,6 +21,7 @@ module.exports = async function setup() {
     cwd,
     stdio: 'inherit',
     env: process.env,
+    shell: process.platform === 'win32',
   });
   if (result.status !== 0) {
     throw new Error(`prisma db push --force-reset fallito (exit ${result.status})`);

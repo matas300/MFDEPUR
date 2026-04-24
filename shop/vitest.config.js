@@ -4,7 +4,7 @@
 // globalSetup: azzera il DB test una volta per run.
 module.exports = {
   test: {
-    globals: false,
+    globals: true,
     environment: 'node',
     include: ['tests/**/*.test.js'],
     exclude: ['node_modules/**', 'dist/**'],
