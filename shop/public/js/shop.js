@@ -19,12 +19,32 @@ function formatNumber(v) {
 
 // ── GuestCart — carrello locale per utenti non registrati ─────────────────────
 
+const GUEST_CART_KEY = 'mfdepur_cart';
+
+// Lettura robusta del carrello guest da localStorage.
+// Fallback: se il JSON è corrotto o non è un array, reset + toast di avviso.
+function readGuestCart() {
+  try {
+    const raw = localStorage.getItem(GUEST_CART_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) throw new Error('not an array');
+    return parsed;
+  } catch (err) {
+    console.warn('[guest-cart] localStorage corrotto, reset:', err && err.message);
+    try { localStorage.removeItem(GUEST_CART_KEY); } catch (_) { /* ignore */ }
+    if (typeof showToast === 'function') {
+      showToast('Carrello ripristinato (dati locali corrotti).', 'error');
+    }
+    return [];
+  }
+}
+
 const GuestCart = {
-  KEY: 'mfdepur_cart',
+  KEY: GUEST_CART_KEY,
 
   get() {
-    try { return JSON.parse(localStorage.getItem(this.KEY) || '[]'); }
-    catch { return []; }
+    return readGuestCart();
   },
 
   save(items) {
