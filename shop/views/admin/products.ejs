@@ -49,7 +49,7 @@
         <tr class="<%= !p.isActive ? 'row--disabled' : '' %>">
           <td>
             <% if (p.imageUrl) { %>
-              <img src="<%= p.imageUrl %>" alt="" style="width:48px;height:48px;object-fit:cover;border-radius:4px">
+              <img src="<%= p.imageUrl %>" alt="" loading="lazy" style="width:48px;height:48px;object-fit:cover;border-radius:4px">
             <% } else { %>
               <div style="width:48px;height:48px;background:var(--bg-subtle);border-radius:4px;display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:1.2rem">📦</div>
             <% } %>
