@@ -20,7 +20,8 @@
 - **M0 — Quick wins & safety net:** ✅ **merged in master** (18 commit)
 - **M1 — Stability & concurrency:** ✅ **merged in master** (17 commit)
 - **M4 — Test & Code Quality:** ✅ **merged in master** (13 commit)
-- **M3 — Production Readiness:** ✅ **merged in master** (10 commit). Include: pino 9 logger (JSON prod + pretty dev + redact secrets), pino-http correlation-id, compression (skip webhook), /healthz + /health (readiness con DB check), Prisma log warn in prod, migration baseline "init", Dockerfile multi-stage + .dockerignore, PM2 ecosystem.config.js, docs/DEPLOYMENT.md runbook completo. Deferred: M3-bis (Postgres migration reale quando DB managed provisionato).
+- **M3 — Production Readiness:** ✅ **merged in master** (10 commit)
+- **M5 — UI/UX Hardening:** ✅ **merged in master** (16 commit). Include: CSP styleSrc strict + styleSrcAttr 'unsafe-inline' (protegge <style> block senza refactor 207 inline style), errorId tracking via req.id, src/utils/format.js Intl it-IT (€1.234,56), 69 scope="col", aria-describedby+aria-invalid, loading=lazy esteso, inputmode email/tel/CAP, hint 3DS, minOrderQty badge, robots.txt, guest cart localStorage fallback. Scoperto: handler [data-confirm] con modal custom accessibile già presente (più avanzato del piano). Debito tecnico tracciato: 207 inline style attributes (protetti, refactor post-go-live).
 - **Follow-up M1 da M7:** webhook Stripe duplicato può re-inviare email (dedupe con queue)
 - **Follow-up M4 (bug UX pre-esistente):** `views/auth/login.ejs` legge `errors[]` ma controller passa `error` (string) → utenti non vedono messaggi errore login. Fix minimale da schedulare.
 - **Prossimo:** M2 (fiscal IT — richiede decisione provider SDI) o M3 (Postgres/migrations/health/backup/Docker). M2+M3 parallelizzabili dopo decisione SDI.
