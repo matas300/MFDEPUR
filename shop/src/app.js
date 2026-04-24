@@ -196,11 +196,17 @@ app.use(observability.errorHandler()); // cattura errori prima del render custom
 
 // ── Error handler ─────────────────────────────────────────────────────────────
 app.use((err, req, res, next) => {
-  console.error(err);
+  // req.id viene da pino-http (M3-α-2). Se per qualche motivo non c'è, fallback a crypto.randomUUID().
+  const errorId = req.id || require('crypto').randomUUID();
+  if (req.log) {
+    req.log.error({ err, errorId }, 'unhandled error');
+  } else {
+    console.error(`[${errorId}]`, err);
+  }
   const code = err.status || 500;
   const message = process.env.NODE_ENV === 'production' ? 'Errore interno del server' : err.message;
-  if (req.accepts('json')) return res.status(code).json({ error: message });
-  res.status(code).render('error', { message, code });
+  if (req.accepts('json')) return res.status(code).json({ error: message, errorId });
+  res.status(code).render('error', { message, code, errorId });
 });
 
 module.exports = app;
