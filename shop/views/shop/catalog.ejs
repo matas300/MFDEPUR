@@ -151,6 +151,12 @@
                 <% if (product.shortDesc) { %>
                   <p class="product-card-desc"><%= product.shortDesc %></p>
                 <% } %>
+                <% if (product.minOrderQty && product.minOrderQty > 1) { %>
+                  <span class="badge-min-qty" style="display:inline-block; background:#eef4ff; color:#0a3d8f;
+                        padding:2px 8px; border-radius:10px; font-size:12px; margin-top:4px;">
+                    Min. <%= product.minOrderQty %> <%= product.unit || 'pz' %>
+                  </span>
+                <% } %>
                 <div class="product-card-footer">
                   <% if (product.priceOnRequest) { %>
                     <span class="product-card-price" style="font-size:.8rem;color:var(--text-muted);font-weight:600">Su richiesta</span>
