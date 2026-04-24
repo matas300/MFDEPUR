@@ -16,6 +16,7 @@ const {
   csrfErrorHandler,
 } = require('./middleware/csrf');
 const orderCtrl = require('./controllers/orderController');
+const format = require('./utils/format');
 
 const app = express();
 
@@ -166,6 +167,11 @@ app.use(injectUser);
 app.use((req, res, next) => {
   res.locals.currentPath = req.path;
   res.locals.baseUrl = process.env.BASE_URL;
+  // Formatter 'it-IT' iniettati come res.locals per uso nei template EJS
+  res.locals.formatEuro = format.formatEuro;
+  res.locals.formatNumber = format.formatNumber;
+  res.locals.formatDate = format.formatDate;
+  res.locals.formatDateTime = format.formatDateTime;
   next();
 });
 
