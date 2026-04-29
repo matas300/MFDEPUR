@@ -103,6 +103,16 @@
           <p style="color:var(--text-muted)"><%= new Date(order.shippedAt).toLocaleDateString('it-IT') %></p>
         </div>
       <% } %>
+      <% if (order.trackingCarrier || order.trackingNumber || order.trackingUrl) { %>
+        <div class="tracking-info">
+          <h4>Tracking spedizione</h4>
+          <% if (order.trackingCarrier) { %><p><strong>Vettore:</strong> <%= order.trackingCarrier %></p><% } %>
+          <% if (order.trackingNumber) { %><p><strong>Numero tracking:</strong> <%= order.trackingNumber %></p><% } %>
+          <% if (order.trackingUrl) { %>
+            <p><a href="<%= order.trackingUrl %>" target="_blank" rel="noopener noreferrer">Traccia la spedizione</a></p>
+          <% } %>
+        </div>
+      <% } %>
       <% if (order.notes) { %>
         <div>
           <h4>Note ordine</h4>

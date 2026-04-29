@@ -110,8 +110,29 @@
         </select>
       </div>
       <div class="form-group">
-        <label>Note interne (opzionale)</label>
-        <textarea name="notes" class="form-control" rows="3"></textarea>
+        <label for="trackingCarrier">Vettore</label>
+        <select name="trackingCarrier" id="trackingCarrier" class="form-control">
+          <option value="">— Nessuno —</option>
+          <% (typeof carriers !== 'undefined' ? carriers : []).forEach(c => { %>
+            <option value="<%= c %>" <%= order.trackingCarrier === c ? 'selected' : '' %>><%= c %></option>
+          <% }) %>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="trackingNumber">Numero tracking</label>
+        <input type="text" name="trackingNumber" id="trackingNumber" class="form-control" maxlength="100" value="<%= order.trackingNumber || '' %>">
+      </div>
+      <div class="form-group">
+        <label for="trackingUrl">URL tracking (opzionale, https://)</label>
+        <input type="url" name="trackingUrl" id="trackingUrl" class="form-control" maxlength="500" value="<%= order.trackingUrl || '' %>">
+        <small>Lasciare vuoto per generazione automatica dai vettori noti.</small>
+      </div>
+      <% if (order.trackingUrl) { %>
+        <p><a href="<%= order.trackingUrl %>" target="_blank" rel="noopener noreferrer">Apri pagina tracking del vettore</a></p>
+      <% } %>
+      <div class="form-group">
+        <label for="adminNotes">Note interne (opzionale)</label>
+        <textarea name="adminNotes" id="adminNotes" class="form-control" rows="3"></textarea>
       </div>
       <button type="submit" class="btn btn-primary btn-block">Aggiorna stato</button>
     </form>

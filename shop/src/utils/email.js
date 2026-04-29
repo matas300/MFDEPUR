@@ -160,6 +160,25 @@ async function sendOrderAwaitingApproval(order, buyer, admins) {
   });
 }
 
+async function sendOrderShipped(order, user) {
+  const carrierLine = order.trackingCarrier
+    ? `<p><strong>Vettore:</strong> ${order.trackingCarrier}</p>` : '';
+  const numberLine = order.trackingNumber
+    ? `<p><strong>Numero tracking:</strong> ${order.trackingNumber}</p>` : '';
+  const linkLine = order.trackingUrl
+    ? `<p><a href="${order.trackingUrl}" class="btn">Traccia spedizione</a></p>` : '';
+  await sendMail({
+    to: user.email,
+    subject: `Ordine ${order.orderNumber} spedito`,
+    html: emailWrapper(`
+      <h2>Il tuo ordine è in viaggio</h2>
+      <p>Ciao ${user.firstName}, il tuo ordine <strong>#${order.orderNumber}</strong> è stato spedito.</p>
+      ${carrierLine}${numberLine}${linkLine}
+      <a href="${process.env.BASE_URL}/account/orders/${order.id}" class="btn">Dettaglio ordine</a>
+    `),
+  });
+}
+
 module.exports = {
   sendWelcome,
   sendCompanyApproved,
@@ -167,4 +186,5 @@ module.exports = {
   sendPasswordReset,
   sendNewOrderNotificationAdmin,
   sendOrderAwaitingApproval,
+  sendOrderShipped,
 };

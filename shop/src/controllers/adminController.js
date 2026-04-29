@@ -2,7 +2,8 @@ const prisma = require('../config/database');
 const emailUtil = require('../utils/email');
 const { logAudit } = require('../utils/audit');
 const { logEmailFailure } = require('../utils/emailLogger');
-const { COMPANY_STATUSES, MAX_LEN, ORDER_STATUSES, ORDER_STATUS_TRANSITIONS } = require('../config/constants');
+const { COMPANY_STATUSES, MAX_LEN, ORDER_STATUSES, ORDER_STATUS_TRANSITIONS, CARRIERS } = require('../config/constants');
+const { buildTrackingUrl } = require('../utils/tracking');
 
 // GET /admin  — dashboard
 exports.getDashboard = async (req, res) => {
@@ -220,11 +221,11 @@ exports.getOrderDetail = async (req, res) => {
     },
   });
   if (!order) return res.status(404).render('error', { message: 'Ordine non trovato', code: 404 });
-  res.render('admin/order-detail', { order, title: `Ordine #${order.orderNumber}` });
+  res.render('admin/order-detail', { order, carriers: CARRIERS, title: `Ordine #${order.orderNumber}` });
 };
 
 exports.updateOrderStatus = async (req, res) => {
-  const { status, adminNotes, trackingNumber } = req.body;
+  const { status, adminNotes, trackingNumber, trackingCarrier, trackingUrl } = req.body;
 
   // Validazione enum stato ordine
   if (!ORDER_STATUSES.includes(status)) {
@@ -236,7 +237,10 @@ exports.updateOrderStatus = async (req, res) => {
 
   const current = await prisma.order.findUnique({
     where: { id: req.params.id },
-    select: { id: true, status: true, shippedAt: true, deliveredAt: true },
+    select: {
+      id: true, status: true, shippedAt: true, deliveredAt: true,
+      trackingCarrier: true, trackingNumber: true, trackingUrl: true,
+    },
   });
   if (!current) {
     return res.status(404).render('error', { message: 'Ordine non trovato.', code: 404 });
@@ -254,9 +258,25 @@ exports.updateOrderStatus = async (req, res) => {
   // Clamp free-text a MAX_LEN
   const data = { status };
   if (trackingNumber !== undefined) {
-    data.trackingNumber = trackingNumber
-      ? String(trackingNumber).slice(0, MAX_LEN.trackingNumber)
-      : undefined;
+    const t = String(trackingNumber).trim();
+    data.trackingNumber = t ? t.slice(0, MAX_LEN.trackingNumber) : null;
+  }
+  if (trackingCarrier !== undefined) {
+    const c = String(trackingCarrier).trim().toUpperCase();
+    data.trackingCarrier = c && CARRIERS.includes(c) ? c : null;
+  }
+  if (trackingUrl !== undefined) {
+    const u = String(trackingUrl).trim();
+    // Sanity: deve essere https://... (no http:// o altri schemi) e capped
+    data.trackingUrl = /^https:\/\//i.test(u) ? u.slice(0, MAX_LEN.trackingUrl) : null;
+  }
+  // Se admin ha settato carrier+number ma NON un trackingUrl esplicito, deriviamo
+  const finalNumber  = data.trackingNumber  !== undefined ? data.trackingNumber  : current.trackingNumber;
+  const finalCarrier = data.trackingCarrier !== undefined ? data.trackingCarrier : current.trackingCarrier;
+  if ((data.trackingUrl === undefined || data.trackingUrl === null || data.trackingUrl === '')
+      && finalCarrier && finalNumber) {
+    const derived = buildTrackingUrl(finalCarrier, finalNumber);
+    if (derived) data.trackingUrl = derived;
   }
   if (adminNotes !== undefined) {
     data.adminNotes = adminNotes
@@ -276,8 +296,25 @@ exports.updateOrderStatus = async (req, res) => {
     action: 'ORDER_STATUS_CHANGE',
     entityType: 'Order',
     entityId: order.id,
-    metadata: { from: current.status, to: order.status, trackingNumber: data.trackingNumber || null },
+    metadata: {
+      from: current.status,
+      to: order.status,
+      trackingNumber:  data.trackingNumber  !== undefined ? data.trackingNumber  : null,
+      trackingCarrier: data.trackingCarrier !== undefined ? data.trackingCarrier : null,
+      trackingUrl:     data.trackingUrl     !== undefined ? data.trackingUrl     : null,
+    },
   });
+
+  // Notifica cliente quando l'ordine passa a SHIPPED (transizione effettiva)
+  if (order.status === 'SHIPPED' && current.status !== 'SHIPPED' && order.user?.email) {
+    await emailUtil.sendOrderShipped(order, order.user).catch(err => logEmailFailure({
+      to: order.user.email,
+      subject: `Ordine ${order.orderNumber} spedito`,
+      templateName: 'sendOrderShipped',
+      err,
+      context: { orderId: order.id },
+    }));
+  }
 
   if (req.accepts('json')) return res.json({ ok: true, status: order.status });
   res.redirect(`/admin/orders/${order.id}?updated=1`);
