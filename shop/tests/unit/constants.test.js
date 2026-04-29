@@ -11,9 +11,9 @@ describe('constants', () => {
     expect(TAX_RATE).toBe(0.22);
   });
 
-  it('ORDER_STATUSES contiene i 8 stati business', () => {
+  it('ORDER_STATUSES contiene i 9 stati business', () => {
     expect(ORDER_STATUSES).toEqual([
-      'PENDING', 'PAYMENT_FAILED', 'CONFIRMED', 'PROCESSING',
+      'AWAITING_APPROVAL', 'PENDING', 'PAYMENT_FAILED', 'CONFIRMED', 'PROCESSING',
       'SHIPPED', 'DELIVERED', 'CANCELLED', 'REFUNDED',
     ]);
   });
