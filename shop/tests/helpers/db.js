@@ -27,7 +27,7 @@ async function seedCompany(overrides = {}) {
   });
 }
 
-async function seedUser({ company, email, password, role = 'CUSTOMER', isEmailVerified = true } = {}) {
+async function seedUser({ company, email, password, role = 'CUSTOMER', companyRole, isEmailVerified = true } = {}) {
   const pw = password || 'TestPassword123';
   return prisma.user.create({
     data: {
@@ -36,6 +36,7 @@ async function seedUser({ company, email, password, role = 'CUSTOMER', isEmailVe
       firstName: 'Mario',
       lastName: 'Rossi',
       role,
+      ...(companyRole !== undefined ? { companyRole } : {}),
       isEmailVerified,
       companyId: company?.id || null,
     },
