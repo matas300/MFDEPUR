@@ -10,6 +10,13 @@ exports.getDashboard = async (req, res) => {
   const now = new Date();
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
+  const startOfDay = new Date(now); startOfDay.setHours(0, 0, 0, 0);
+  // Settimana lunedì-domenica (it-IT)
+  const startOfWeek = new Date(startOfDay);
+  const dow = startOfDay.getDay(); // 0=domenica
+  const offset = (dow === 0 ? 6 : dow - 1);
+  startOfWeek.setDate(startOfWeek.getDate() - offset);
+
   const thirtyDaysAgo = new Date(now);
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 29);
   thirtyDaysAgo.setHours(0, 0, 0, 0);
@@ -24,6 +31,9 @@ exports.getDashboard = async (req, res) => {
     lowStockProducts,
     recentOrders,
     last30Orders,
+    ordersToday,
+    ordersWeek,
+    awaitingApproval,
   ] = await Promise.all([
     prisma.order.count({ where: { status: { notIn: ['PENDING', 'PAYMENT_FAILED', 'CANCELLED', 'AWAITING_APPROVAL'] } } }),
     prisma.order.count({ where: { createdAt: { gte: startOfMonth }, status: { notIn: ['PENDING', 'PAYMENT_FAILED', 'CANCELLED', 'AWAITING_APPROVAL'] } } }),
@@ -41,6 +51,13 @@ exports.getDashboard = async (req, res) => {
       where: { createdAt: { gte: thirtyDaysAgo }, status: { notIn: ['PENDING', 'PAYMENT_FAILED', 'CANCELLED', 'AWAITING_APPROVAL'] } },
       select: { createdAt: true, total: true },
     }),
+    prisma.order.count({
+      where: { createdAt: { gte: startOfDay }, status: { notIn: ['PENDING', 'PAYMENT_FAILED', 'CANCELLED', 'AWAITING_APPROVAL'] } },
+    }),
+    prisma.order.count({
+      where: { createdAt: { gte: startOfWeek }, status: { notIn: ['PENDING', 'PAYMENT_FAILED', 'CANCELLED', 'AWAITING_APPROVAL'] } },
+    }),
+    prisma.order.count({ where: { status: 'AWAITING_APPROVAL' } }),
   ]);
 
   // Bucketing client-agnostic: funziona sia su SQLite sia su Postgres
@@ -66,6 +83,9 @@ exports.getDashboard = async (req, res) => {
     stats: {
       totalOrders,
       ordersThisMonth,
+      ordersToday,
+      ordersWeek,
+      awaitingApproval,
       revenue: Number(revenueResult._sum.total || 0),
       revenueMonth: Number(revenueMonthResult._sum.total || 0),
       pendingCompanies,
