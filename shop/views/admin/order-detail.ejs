@@ -28,6 +28,23 @@
 
     <%- include('../partials/_order-stepper', { order }) %>
 
+    <% if (order.status === 'AWAITING_APPROVAL') { %>
+      <div class="alert alert-warning" style="margin:1rem 0">
+        <h3 style="margin-top:0">Approvazione richiesta</h3>
+        <p>Ordine creato da <strong><%= order.user.firstName %> <%= order.user.lastName %></strong> per <%= order.company.name %>. In attesa di approvazione del responsabile aziendale; in alternativa puoi forzare l'esito come admin.</p>
+        <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+          <form method="POST" action="/admin/orders/<%= order.id %>/approve" style="margin:0">
+            <%- include('../partials/_csrf') %>
+            <button type="submit" class="btn btn-primary">Approva (override)</button>
+          </form>
+          <form method="POST" action="/admin/orders/<%= order.id %>/reject" style="margin:0">
+            <%- include('../partials/_csrf') %>
+            <button type="submit" class="btn btn-outline">Rifiuta (override)</button>
+          </form>
+        </div>
+      </div>
+    <% } %>
+
     <table class="order-items-table">
       <thead>
         <tr>
@@ -110,8 +127,29 @@
         </select>
       </div>
       <div class="form-group">
-        <label>Note interne (opzionale)</label>
-        <textarea name="notes" class="form-control" rows="3"></textarea>
+        <label for="trackingCarrier">Vettore</label>
+        <select name="trackingCarrier" id="trackingCarrier" class="form-control">
+          <option value="">— Nessuno —</option>
+          <% (typeof carriers !== 'undefined' ? carriers : []).forEach(c => { %>
+            <option value="<%= c %>" <%= order.trackingCarrier === c ? 'selected' : '' %>><%= c %></option>
+          <% }) %>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="trackingNumber">Numero tracking</label>
+        <input type="text" name="trackingNumber" id="trackingNumber" class="form-control" maxlength="100" value="<%= order.trackingNumber || '' %>">
+      </div>
+      <div class="form-group">
+        <label for="trackingUrl">URL tracking (opzionale, https://)</label>
+        <input type="url" name="trackingUrl" id="trackingUrl" class="form-control" maxlength="500" value="<%= order.trackingUrl || '' %>">
+        <small>Lasciare vuoto per generazione automatica dai vettori noti.</small>
+      </div>
+      <% if (order.trackingUrl) { %>
+        <p><a href="<%= order.trackingUrl %>" target="_blank" rel="noopener noreferrer">Apri pagina tracking del vettore</a></p>
+      <% } %>
+      <div class="form-group">
+        <label for="adminNotes">Note interne (opzionale)</label>
+        <textarea name="adminNotes" id="adminNotes" class="form-control" rows="3"></textarea>
       </div>
       <button type="submit" class="btn btn-primary btn-block">Aggiorna stato</button>
     </form>

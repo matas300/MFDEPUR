@@ -22,30 +22,17 @@
 - **M4 — Test & Code Quality:** ✅ **merged in master** (13 commit)
 - **M3 — Production Readiness:** ✅ **merged in master** (10 commit)
 - **M5 — UI/UX Hardening:** ✅ **merged in master** (16 commit). Include: CSP styleSrc strict + styleSrcAttr 'unsafe-inline' (protegge <style> block senza refactor 207 inline style), errorId tracking via req.id, src/utils/format.js Intl it-IT (€1.234,56), 69 scope="col", aria-describedby+aria-invalid, loading=lazy esteso, inputmode email/tel/CAP, hint 3DS, minOrderQty badge, robots.txt, guest cart localStorage fallback. Scoperto: handler [data-confirm] con modal custom accessibile già presente (più avanzato del piano). Debito tecnico tracciato: 207 inline style attributes (protetti, refactor post-go-live).
+- **M6 — Admin & Business Completeness:** ✅ **merged in master 2026-04-29** (9 commit). Include: T1 RBAC `User.companyRole` + `requireCompanyRole` middleware con bypass ADMIN globale + bootstrap COMPANY_ADMIN via migration SQL (utente più vecchio per company); T2 `Company.requiresOrderApproval` + stato `AWAITING_APPROVAL` + transizione `[PENDING, CANCELLED]` + branching in `postCheckout` (BUYER → AWAITING_APPROVAL, no Stripe, no stock decrement) + endpoint `approve/reject` company-side (`/company/orders/:id/approve|reject`) e admin override (`/admin/orders/:id/approve|reject`) + UI `views/company/{orders,order-detail}.ejs` + link nav "Ordini azienda" + email `sendOrderAwaitingApproval/Approved/Rejected`; T3 CSV export già esistente (out of scope); T4 `Order.trackingCarrier/trackingUrl` + helper `buildTrackingUrl` (DHL/GLS/SDA/BRT/UPS/FEDEX/POSTE) + UI admin order-detail (select + url) + email `sendOrderShipped` con link cliccabile; T5 dashboard stats oggi/settimana/AWAITING_APPROVAL count. Fix critical post-review: race condition risolta con `updateMany` atomico + `requireApprovedCompany` aggiunto a `/company` routes. Test: 43/43 verdi (8 unit + 5 integration). Deferred a M6-bis: UI COMPANY_ADMIN per gestire utenti, API integration carrier, PDF fatture bulk, toggle `requiresOrderApproval` in form admin (se non già presente).
 
-## Prossima sessione — M6 (Admin & Business Completeness)
+## Prossima sessione
 
-Stato: **non iniziato**. Nessun branch creato. Scope concordato ma plan non ancora redatto.
+Candidate: **M2** (fiscal IT) — sbloccare le risposte commercialista (`docs/audit/2026-04-23/M2-domande-commercialista.md`) prima di partire. Alternativa: **M3-bis** (Postgres reale) se DB managed disponibile, o **M7** (advanced hardening, BullMQ + 2FA admin + session blacklist + WAF).
 
-**Scope concordato M6 (1 sessione):**
-- **T1 RBAC company roles** — schema `User.companyRole` (COMPANY_ADMIN/BUYER/VIEWER) + middleware `requireCompanyRole(roles)` + enforcement sulle route. **Deferred: UI per COMPANY_ADMIN di aggiungere/rimuovere utenti nella propria company** (→ M6-bis).
-- **T2 Approval workflow ordini interno company** — schema `Company.requiresOrderApproval` flag + nuovo stato `AWAITING_APPROVAL` in `ORDER_STATUSES` + transizioni in `ORDER_STATUS_TRANSITIONS` + branching in `postCheckout` + admin/company-admin approve endpoint + UI visibilità status.
-- **T3 CSV bulk export ordini** — `/admin/orders/export/csv` con date range. **Deferred: PDF fatture bulk** (dipende da M2).
-- **T4 Tracking carrier** — schema `Order.trackingCarrier` + `Order.trackingUrl` + admin UI form + link in email shipped + visibilità in account/order-detail. **Deferred: API integration DHL/GLS/SDA** (richiede API keys cliente → M6-bis o M7).
-- **T5 Admin dashboard stats upgrade** — verificare dashboard esistente (chart.js già in uso), completare card mancanti: ordini oggi/settimana, ricavo mese, company pending count, orders AWAITING_APPROVAL count.
+Follow-up bug UX pre-esistente schedulabile in qualsiasi sessione: `views/auth/login.ejs` legge `errors[]` ma controller passa `error` string.
 
-**Decomposizione attesa:**
-- Wave 1 Foundation (1 subagent): schema updates + migration + prisma generate + constants.js (COMPANY_ROLES, AWAITING_APPROVAL) + middleware requireCompanyRole
-- Wave 2 Parallel (2-3 subagent): batch α approval workflow (orderController + admin views), batch β tracking+CSV+dashboard (adminController + email)
-- Wave 3: test regression + merge
+## Stato dopo 6 milestone merged
 
-**File principali da toccare:** `shop/prisma/schema.prisma`, `shop/src/config/constants.js`, `shop/src/middleware/auth.js`, `shop/src/controllers/orderController.js`, `shop/src/controllers/adminController.js`, `shop/src/routes/admin.js`, `shop/views/admin/dashboard.ejs`, `shop/views/admin/orders.ejs`, `shop/views/admin/order-detail.ejs`, `shop/views/account/orders.ejs`, `shop/views/account/order-detail.ejs`, `shop/src/utils/email.js`.
-
-**Riferimenti:** `99-MASTER.md` sezione "M6" + `13-ui-ux-perf.md` (ADMIN-001, ACCOUNT-001) + `11-eshop-fiscal.md` (SHOP-015, SHOP-018).
-
-## Stato dopo 5 milestone merged
-
-Master è a **97 commit avanti rispetto a origin/master** (nessun push eseguito — decisione user).
+Master è a **107+ commit avanti rispetto a origin/master** (nessun push eseguito — decisione user).
 
 Per il go-live restano:
 - **M2** (fiscal IT) — BLOCKED su risposte commercialista (`docs/audit/2026-04-23/M2-domande-commercialista.md`)

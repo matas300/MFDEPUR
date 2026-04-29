@@ -2,17 +2,10 @@
 
 <div class="container">
   <nav class="breadcrumb">
-    <a href="/account">Account</a>
-    <span>/</span>
-    <a href="/account/orders">I miei ordini</a>
+    <a href="/company/orders">Ordini azienda</a>
     <span>/</span>
     <span><%= order.orderNumber %></span>
   </nav>
-
-  <div class="print-header">
-    <strong>MF Depur</strong> — Ricevuta ordine <%= order.orderNumber %><br>
-    <small>www.mfdepur.com</small>
-  </div>
 
   <div class="order-detail-card">
     <div class="order-detail-header">
@@ -25,12 +18,20 @@
       <span class="order-status order-status--<%= order.status.toLowerCase() %>"><%= order.status %></span>
     </div>
 
-    <%- include('../partials/_order-stepper', { order }) %>
-
-    <% if (order.paymentMethod === 'BANK_TRANSFER' && order.status === 'CONFIRMED') { %>
-      <div class="alert alert-info" style="margin:1.5rem 0">
-        <strong>Bonifico bancario</strong> — In attesa di ricevere il pagamento.<br>
-        <small>Coordinate bancarie inviate via email alla registrazione dell'ordine.</small>
+    <% if (order.status === 'AWAITING_APPROVAL') { %>
+      <div class="alert alert-warning" style="margin:1.25rem 0">
+        <h3 style="margin-top:0">Approvazione richiesta</h3>
+        <p>L'ordine è stato creato da <strong><%= order.user.firstName %> <%= order.user.lastName %></strong> e attende la tua approvazione prima di procedere al pagamento.</p>
+        <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.75rem">
+          <form method="POST" action="/company/orders/<%= order.id %>/approve" style="margin:0">
+            <%- include('../partials/_csrf') %>
+            <button type="submit" class="btn btn-primary">Approva ordine</button>
+          </form>
+          <form method="POST" action="/company/orders/<%= order.id %>/reject" style="margin:0">
+            <%- include('../partials/_csrf') %>
+            <button type="submit" class="btn btn-outline">Rifiuta ordine</button>
+          </form>
+        </div>
       </div>
     <% } %>
 
@@ -78,6 +79,13 @@
     </table>
 
     <div class="order-meta-grid">
+      <div>
+        <h4>Richiedente</h4>
+        <p style="color:var(--text-muted)">
+          <%= order.user.firstName %> <%= order.user.lastName %><br>
+          <a href="mailto:<%= order.user.email %>"><%= order.user.email %></a>
+        </p>
+      </div>
       <% if (order.address) { %>
         <div>
           <h4>Spedizione a</h4>
@@ -91,31 +99,12 @@
       <div>
         <h4>Pagamento</h4>
         <p style="color:var(--text-muted)">
-          <%= order.paymentMethod === 'STRIPE' ? 'Carta di credito/debito' : 'Bonifico bancario' %><br>
-          <% if (order.paidAt) { %>
-            Pagato il: <%= new Date(order.paidAt).toLocaleDateString('it-IT') %>
-          <% } %>
+          <%= order.paymentMethod === 'STRIPE' ? 'Carta di credito/debito' : 'Bonifico bancario' %>
         </p>
       </div>
-      <% if (order.shippedAt) { %>
-        <div>
-          <h4>Spedito</h4>
-          <p style="color:var(--text-muted)"><%= new Date(order.shippedAt).toLocaleDateString('it-IT') %></p>
-        </div>
-      <% } %>
-      <% if (order.trackingCarrier || order.trackingNumber || order.trackingUrl) { %>
-        <div class="tracking-info">
-          <h4>Tracking spedizione</h4>
-          <% if (order.trackingCarrier) { %><p><strong>Vettore:</strong> <%= order.trackingCarrier %></p><% } %>
-          <% if (order.trackingNumber) { %><p><strong>Numero tracking:</strong> <%= order.trackingNumber %></p><% } %>
-          <% if (order.trackingUrl) { %>
-            <p><a href="<%= order.trackingUrl %>" target="_blank" rel="noopener noreferrer">Traccia la spedizione</a></p>
-          <% } %>
-        </div>
-      <% } %>
       <% if (order.notes) { %>
         <div>
-          <h4>Note ordine</h4>
+          <h4>Note</h4>
           <p style="color:var(--text-muted)"><%= order.notes %></p>
         </div>
       <% } %>
@@ -123,11 +112,7 @@
   </div>
 
   <div style="margin-top:1.5rem;display:flex;gap:.75rem;flex-wrap:wrap">
-    <a href="/account/orders" class="btn btn-outline">← Tutti gli ordini</a>
-    <button type="button" class="btn btn-outline" data-print>
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:text-bottom"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
-      Stampa
-    </button>
+    <a href="/company/orders" class="btn btn-outline">← Tutti gli ordini azienda</a>
   </div>
 </div>
 

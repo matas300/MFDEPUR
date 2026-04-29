@@ -120,6 +120,65 @@ exports.postCheckout = async (req, res) => {
   const shippingCost = 0;
   const total = subtotal + taxAmount + shippingCost;
 
+  // Approval workflow: se la company richiede approvazione interna e l'utente
+  // NON è COMPANY_ADMIN, l'ordine viene creato in AWAITING_APPROVAL senza
+  // passaggio di pagamento. Il COMPANY_ADMIN dovrà approvarlo per sbloccare il pagamento.
+  const needsApproval = req.user.company?.requiresOrderApproval
+    && req.user.companyRole !== 'COMPANY_ADMIN'
+    && req.user.role !== 'ADMIN';
+
+  if (needsApproval) {
+    const orderNumber = await generateOrderNumber();
+    const order = await prisma.order.create({
+      data: {
+        orderNumber,
+        userId: req.user.id,
+        companyId: req.user.companyId,
+        addressId: addressId || null,
+        status: 'AWAITING_APPROVAL',
+        paymentMethod: paymentMethod.toUpperCase(),
+        subtotal,
+        taxAmount,
+        shippingCost,
+        total,
+        notes: notes?.trim() || null,
+        items: {
+          create: cart.items.map(i => ({
+            productId: i.productId,
+            productName: i.product.name,
+            productSku: i.product.sku,
+            unit: i.product.unit,
+            quantity: i.quantity,
+            unitPrice: i.product.price,
+            total: Number(i.product.price) * i.quantity,
+          })),
+        },
+      },
+      include: { items: true, company: true },
+    });
+
+    if (idempotencyKey) idempotencySet(idempotencyKey, order.id);
+
+    // Notifica i COMPANY_ADMIN della stessa company
+    const admins = await prisma.user.findMany({
+      where: { companyId: req.user.companyId, companyRole: 'COMPANY_ADMIN' },
+      select: { email: true, firstName: true, lastName: true },
+    });
+    if (admins.length > 0) {
+      await emailUtil.sendOrderAwaitingApproval(order, req.user, admins).catch(err =>
+        logEmailFailure({
+          to: admins.map(a => a.email).join(','),
+          subject: `Ordine ${order.orderNumber} in attesa di approvazione`,
+          templateName: 'sendOrderAwaitingApproval',
+          err,
+          context: { orderId: order.id },
+        })
+      );
+    }
+
+    return res.redirect(`/account/orders/${order.id}?awaitingApproval=1`);
+  }
+
   const orderNumber = await generateOrderNumber();
 
   // Crea ordine PENDING

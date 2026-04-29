@@ -131,10 +131,88 @@ async function sendNewOrderNotificationAdmin(order, company) {
   });
 }
 
+async function sendOrderAwaitingApproval(order, buyer, admins) {
+  const itemsHtml = order.items.map(i => `
+    <tr>
+      <td>${i.productName}</td>
+      <td>${i.quantity} ${i.unit}</td>
+      <td>€${Number(i.unitPrice).toFixed(2)}</td>
+      <td>€${Number(i.total).toFixed(2)}</td>
+    </tr>`).join('');
+  const adminUrl = `${process.env.BASE_URL}/company/orders/${order.id}`;
+  const toList = admins.map(a => a.email).filter(Boolean);
+  if (toList.length === 0) return;
+  await sendMail({
+    to: toList.join(','),
+    subject: `Ordine ${order.orderNumber} in attesa di approvazione`,
+    html: emailWrapper(`
+      <h2>Ordine in attesa di approvazione</h2>
+      <p>Un utente della tua azienda ha creato un nuovo ordine che richiede la tua approvazione prima del pagamento.</p>
+      <p><strong>Richiedente:</strong> ${buyer.firstName} ${buyer.lastName} (${buyer.email})</p>
+      <p><strong>N° ordine:</strong> ${order.orderNumber}</p>
+      <table>
+        <thead><tr><th>Prodotto</th><th>Qtà</th><th>Prezzo unit.</th><th>Totale</th></tr></thead>
+        <tbody>${itemsHtml}</tbody>
+      </table>
+      <p class="total"><strong>Totale: €${Number(order.total).toFixed(2)}</strong></p>
+      <a href="${adminUrl}" class="btn">Approva o rifiuta</a>
+    `),
+  });
+}
+
+async function sendOrderShipped(order, user) {
+  const carrierLine = order.trackingCarrier
+    ? `<p><strong>Vettore:</strong> ${order.trackingCarrier}</p>` : '';
+  const numberLine = order.trackingNumber
+    ? `<p><strong>Numero tracking:</strong> ${order.trackingNumber}</p>` : '';
+  const linkLine = order.trackingUrl
+    ? `<p><a href="${order.trackingUrl}" class="btn">Traccia spedizione</a></p>` : '';
+  await sendMail({
+    to: user.email,
+    subject: `Ordine ${order.orderNumber} spedito`,
+    html: emailWrapper(`
+      <h2>Il tuo ordine è in viaggio</h2>
+      <p>Ciao ${user.firstName}, il tuo ordine <strong>#${order.orderNumber}</strong> è stato spedito.</p>
+      ${carrierLine}${numberLine}${linkLine}
+      <a href="${process.env.BASE_URL}/account/orders/${order.id}" class="btn">Dettaglio ordine</a>
+    `),
+  });
+}
+
+async function sendOrderApproved(order, buyer) {
+  const url = `${process.env.BASE_URL}/account/orders/${order.id}`;
+  await sendMail({
+    to: buyer.email,
+    subject: `Ordine ${order.orderNumber} approvato`,
+    html: emailWrapper(`
+      <h2>Ordine approvato</h2>
+      <p>Ciao ${buyer.firstName}, l'ordine <strong>#${order.orderNumber}</strong> è stato approvato dal responsabile della tua azienda. Ora puoi procedere al pagamento dal tuo account.</p>
+      <a href="${url}" class="btn">Vai all'ordine</a>
+    `),
+  });
+}
+
+async function sendOrderRejected(order, buyer) {
+  const url = `${process.env.BASE_URL}/account/orders/${order.id}`;
+  await sendMail({
+    to: buyer.email,
+    subject: `Ordine ${order.orderNumber} rifiutato`,
+    html: emailWrapper(`
+      <h2>Ordine rifiutato</h2>
+      <p>Ciao ${buyer.firstName}, l'ordine <strong>#${order.orderNumber}</strong> è stato rifiutato dal responsabile della tua azienda e annullato.</p>
+      <a href="${url}" class="btn">Dettagli ordine</a>
+    `),
+  });
+}
+
 module.exports = {
   sendWelcome,
   sendCompanyApproved,
   sendOrderConfirmation,
   sendPasswordReset,
   sendNewOrderNotificationAdmin,
+  sendOrderAwaitingApproval,
+  sendOrderApproved,
+  sendOrderRejected,
+  sendOrderShipped,
 };

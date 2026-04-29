@@ -5,15 +5,21 @@
 // IVA ordinaria italiana. M2 introdurrà aliquote per-product.
 const TAX_RATE = 0.22;
 
+const COMPANY_ROLES = Object.freeze(['COMPANY_ADMIN', 'BUYER', 'VIEWER']);
+
+// Carrier supportati per tracking spedizioni
+const CARRIERS = Object.freeze(['DHL', 'GLS', 'SDA', 'BRT', 'UPS', 'FEDEX', 'POSTE', 'ALTRO']);
+
 // Stati Order (schema.prisma:166 + business rules)
 const ORDER_STATUSES = Object.freeze([
-  'PENDING', 'PAYMENT_FAILED', 'CONFIRMED', 'PROCESSING',
+  'AWAITING_APPROVAL', 'PENDING', 'PAYMENT_FAILED', 'CONFIRMED', 'PROCESSING',
   'SHIPPED', 'DELIVERED', 'CANCELLED', 'REFUNDED',
 ]);
 
 // Transizioni permesse. Un admin non può forzare DELIVERED→PENDING.
 // (Stripe webhook può portare PENDING→CONFIRMED o PENDING→PAYMENT_FAILED.)
 const ORDER_STATUS_TRANSITIONS = Object.freeze({
+  AWAITING_APPROVAL: ['PENDING', 'CANCELLED'],
   PENDING:        ['CONFIRMED', 'PAYMENT_FAILED', 'CANCELLED'],
   PAYMENT_FAILED: ['PENDING', 'CANCELLED'],
   CONFIRMED:      ['PROCESSING', 'CANCELLED', 'REFUNDED'],
@@ -32,6 +38,8 @@ const MAX_LEN = Object.freeze({
   orderNotes:      1000,
   companyNotes:    2000,
   trackingNumber:  100,
+  trackingCarrier: 30,
+  trackingUrl:     500,
   addressStreet:   200,
   addressCity:     100,
   firstName:       100,
@@ -41,6 +49,8 @@ const MAX_LEN = Object.freeze({
 
 module.exports = {
   TAX_RATE,
+  COMPANY_ROLES,
+  CARRIERS,
   ORDER_STATUSES,
   ORDER_STATUS_TRANSITIONS,
   COMPANY_STATUSES,

@@ -20,6 +20,7 @@ model Company {
   website        String?
   status         String    @default("PENDING") // PENDING, APPROVED, REJECTED, SUSPENDED
   notes          String?            // Note admin
+  requiresOrderApproval Boolean   @default(false)
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
@@ -38,6 +39,7 @@ model User {
   lastName             String
   phone                String?
   role                 String    @default("CUSTOMER") // CUSTOMER, ADMIN
+  companyRole          String?   @default("BUYER") // COMPANY_ADMIN, BUYER, VIEWER (null se non in company)
   isEmailVerified      Boolean   @default(false)
   emailVerifyToken     String?
   resetPasswordToken   String?
@@ -163,7 +165,7 @@ model Order {
   company         Company   @relation(fields: [companyId], references: [id])
   addressId       String?
   address         Address?  @relation(fields: [addressId], references: [id])
-  status          String    @default("PENDING") // PENDING, PAYMENT_FAILED, CONFIRMED, PROCESSING, SHIPPED, DELIVERED, CANCELLED, REFUNDED
+  status          String    @default("PENDING") // AWAITING_APPROVAL, PENDING, PAYMENT_FAILED, CONFIRMED, PROCESSING, SHIPPED, DELIVERED, CANCELLED, REFUNDED
   paymentMethod   String    @default("STRIPE")  // STRIPE, BANK_TRANSFER
   paymentIntentId String?
   subtotal        Decimal
@@ -174,6 +176,8 @@ model Order {
   notes           String?
   adminNotes      String?
   trackingNumber  String?
+  trackingCarrier String?
+  trackingUrl     String?
   paidAt          DateTime?
   shippedAt       DateTime?
   deliveredAt     DateTime?

@@ -3,6 +3,8 @@ const {
   ORDER_STATUSES,
   ORDER_STATUS_TRANSITIONS,
   COMPANY_STATUSES,
+  COMPANY_ROLES,
+  CARRIERS,
   MAX_LEN,
 } = require('../../src/config/constants');
 
@@ -11,9 +13,9 @@ describe('constants', () => {
     expect(TAX_RATE).toBe(0.22);
   });
 
-  it('ORDER_STATUSES contiene i 8 stati business', () => {
+  it('ORDER_STATUSES contiene i 9 stati business', () => {
     expect(ORDER_STATUSES).toEqual([
-      'PENDING', 'PAYMENT_FAILED', 'CONFIRMED', 'PROCESSING',
+      'AWAITING_APPROVAL', 'PENDING', 'PAYMENT_FAILED', 'CONFIRMED', 'PROCESSING',
       'SHIPPED', 'DELIVERED', 'CANCELLED', 'REFUNDED',
     ]);
   });
@@ -46,5 +48,17 @@ describe('constants', () => {
     expect(MAX_LEN.orderNotes).toBeGreaterThan(0);
     expect(MAX_LEN.trackingNumber).toBeGreaterThan(0);
     expect(MAX_LEN.firstName).toBeGreaterThan(0);
+  });
+
+  it('COMPANY_ROLES è frozen e contiene i 3 ruoli', () => {
+    expect(Object.isFrozen(COMPANY_ROLES)).toBe(true);
+    expect(COMPANY_ROLES).toEqual(['COMPANY_ADMIN', 'BUYER', 'VIEWER']);
+  });
+
+  it('CARRIERS è frozen e contiene 8 vettori', () => {
+    expect(Object.isFrozen(CARRIERS)).toBe(true);
+    expect(CARRIERS).toContain('DHL');
+    expect(CARRIERS).toContain('ALTRO');
+    expect(CARRIERS.length).toBe(8);
   });
 });

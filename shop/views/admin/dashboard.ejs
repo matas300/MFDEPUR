@@ -26,6 +26,21 @@
     <% } %>
   </div>
   <div class="stat-card">
+    <div class="stat-label">Ordini oggi</div>
+    <div class="stat-value"><%= stats.ordersToday %></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Ordini settimana</div>
+    <div class="stat-value"><%= stats.ordersWeek %></div>
+  </div>
+  <div class="stat-card <%= stats.awaitingApproval > 0 ? 'stat-card--alert' : '' %>">
+    <div class="stat-label">Ordini in approvazione</div>
+    <div class="stat-value"><%= stats.awaitingApproval %></div>
+    <% if (stats.awaitingApproval > 0) { %>
+      <a href="/admin/orders?stato=AWAITING_APPROVAL" class="stat-link">Vedi &rarr;</a>
+    <% } %>
+  </div>
+  <div class="stat-card">
     <div class="stat-label">Prodotti attivi</div>
     <div class="stat-value"><%= stats.totalProducts %></div>
   </div>

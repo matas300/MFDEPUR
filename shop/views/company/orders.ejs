@@ -1,0 +1,53 @@
+<%- include('../partials/_header', { title: 'Ordini azienda' }) %>
+
+<div class="container">
+  <div class="page-header">
+    <h1 class="page-title">Ordini azienda</h1>
+  </div>
+
+  <% if (awaitingCount > 0) { %>
+    <div class="alert alert-warning" style="margin-bottom:1rem">
+      <strong><%= awaitingCount %></strong> ordin<%= awaitingCount === 1 ? 'e' : 'i' %> in attesa di approvazione.
+    </div>
+  <% } %>
+
+  <% if (!orders || orders.length === 0) { %>
+    <%- include('../partials/_empty-state', {
+      icon: 'orders',
+      title: 'Nessun ordine',
+      message: 'Quando un utente della tua azienda creerà un ordine, comparirà qui.',
+      cta: null
+    }) %>
+  <% } else { %>
+    <div class="table-responsive">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th scope="col">N° ordine</th>
+            <th scope="col">Data</th>
+            <th scope="col">Richiedente</th>
+            <th scope="col">Articoli</th>
+            <th scope="col">Totale</th>
+            <th scope="col">Stato</th>
+            <th scope="col"></th>
+          </tr>
+        </thead>
+        <tbody>
+          <% orders.forEach(o => { %>
+            <tr>
+              <td><strong><%= o.orderNumber %></strong></td>
+              <td><%= new Date(o.createdAt).toLocaleDateString('it-IT') %></td>
+              <td><%= o.user.firstName %> <%= o.user.lastName %></td>
+              <td><%= o._count ? o._count.items : '—' %></td>
+              <td><strong><%= formatEuro(o.total) %></strong></td>
+              <td><span class="order-status order-status--<%= o.status.toLowerCase() %>"><%= o.status %></span></td>
+              <td><a href="/company/orders/<%= o.id %>" class="btn btn-outline btn-sm">Dettaglio</a></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  <% } %>
+</div>
+
+<%- include('../partials/_footer') %>
