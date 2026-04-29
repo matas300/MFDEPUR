@@ -24,10 +24,10 @@ exports.getDashboard = async (req, res) => {
     recentOrders,
     last30Orders,
   ] = await Promise.all([
-    prisma.order.count({ where: { status: { notIn: ['PENDING', 'PAYMENT_FAILED', 'CANCELLED'] } } }),
-    prisma.order.count({ where: { createdAt: { gte: startOfMonth }, status: { notIn: ['PENDING', 'PAYMENT_FAILED', 'CANCELLED'] } } }),
-    prisma.order.aggregate({ _sum: { total: true }, where: { status: { notIn: ['PENDING', 'PAYMENT_FAILED', 'CANCELLED'] } } }),
-    prisma.order.aggregate({ _sum: { total: true }, where: { createdAt: { gte: startOfMonth }, status: { notIn: ['PENDING', 'PAYMENT_FAILED', 'CANCELLED'] } } }),
+    prisma.order.count({ where: { status: { notIn: ['PENDING', 'PAYMENT_FAILED', 'CANCELLED', 'AWAITING_APPROVAL'] } } }),
+    prisma.order.count({ where: { createdAt: { gte: startOfMonth }, status: { notIn: ['PENDING', 'PAYMENT_FAILED', 'CANCELLED', 'AWAITING_APPROVAL'] } } }),
+    prisma.order.aggregate({ _sum: { total: true }, where: { status: { notIn: ['PENDING', 'PAYMENT_FAILED', 'CANCELLED', 'AWAITING_APPROVAL'] } } }),
+    prisma.order.aggregate({ _sum: { total: true }, where: { createdAt: { gte: startOfMonth }, status: { notIn: ['PENDING', 'PAYMENT_FAILED', 'CANCELLED', 'AWAITING_APPROVAL'] } } }),
     prisma.company.count({ where: { status: 'PENDING' } }),
     prisma.product.count({ where: { isActive: true } }),
     prisma.$queryRaw`SELECT id, name, sku, stock, "lowStockAlert" FROM "Product" WHERE "isActive" = true AND stock <= "lowStockAlert" LIMIT 10`,
@@ -37,7 +37,7 @@ exports.getDashboard = async (req, res) => {
       include: { company: true, user: { select: { firstName: true, lastName: true } } },
     }),
     prisma.order.findMany({
-      where: { createdAt: { gte: thirtyDaysAgo }, status: { notIn: ['PENDING', 'PAYMENT_FAILED', 'CANCELLED'] } },
+      where: { createdAt: { gte: thirtyDaysAgo }, status: { notIn: ['PENDING', 'PAYMENT_FAILED', 'CANCELLED', 'AWAITING_APPROVAL'] } },
       select: { createdAt: true, total: true },
     }),
   ]);

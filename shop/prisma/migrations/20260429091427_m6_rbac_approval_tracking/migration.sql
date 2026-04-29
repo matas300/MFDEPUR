@@ -30,10 +30,15 @@ CREATE UNIQUE INDEX "Company_vatNumber_key" ON "Company"("vatNumber");
 PRAGMA foreign_keys=ON;
 PRAGMA defer_foreign_keys=OFF;
 
--- Bootstrap: primo utente per company esistente diventa COMPANY_ADMIN
+-- Bootstrap: utente più vecchio per company esistente diventa COMPANY_ADMIN
 UPDATE "User" SET "companyRole" = 'COMPANY_ADMIN'
 WHERE "id" IN (
-  SELECT "id" FROM "User" u1
-  WHERE "companyId" IS NOT NULL
-    AND "id" = (SELECT MIN("id") FROM "User" u2 WHERE u2."companyId" = u1."companyId")
+  SELECT u1."id" FROM "User" u1
+  WHERE u1."companyId" IS NOT NULL
+    AND NOT EXISTS (
+      SELECT 1 FROM "User" u2
+      WHERE u2."companyId" = u1."companyId"
+        AND (u2."createdAt" < u1."createdAt"
+             OR (u2."createdAt" = u1."createdAt" AND u2."id" < u1."id"))
+    )
 );
