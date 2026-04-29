@@ -38,6 +38,25 @@ function requireAdmin(req, res, next) {
   next();
 }
 
+// Verifica companyRole. Bypass per ADMIN globale (super-user di sistema).
+function requireCompanyRole(roles) {
+  const allowed = Array.isArray(roles) ? roles : [roles];
+  return (req, res, next) => {
+    if (!req.user) {
+      if (req.accepts && req.accepts('html')) return res.redirect('/auth/login');
+      return res.status(401).json({ error: 'Non autenticato' });
+    }
+    if (req.user.role === 'ADMIN') return next();
+    if (!req.user.companyId || !allowed.includes(req.user.companyRole)) {
+      if (req.accepts && req.accepts('html')) {
+        return res.status(403).render('error', { message: 'Accesso negato', code: 403 });
+      }
+      return res.status(403).json({ error: 'Accesso negato' });
+    }
+    next();
+  };
+}
+
 // Azienda approvata — i customer devono avere company APPROVED
 function requireApprovedCompany(req, res, next) {
   if (req.user.role === 'ADMIN') return next();
@@ -81,4 +100,4 @@ async function injectUser(req, res, next) {
   next();
 }
 
-module.exports = { requireAuth, requireAdmin, requireApprovedCompany, injectUser };
+module.exports = { requireAuth, requireAdmin, requireCompanyRole, requireApprovedCompany, injectUser };
