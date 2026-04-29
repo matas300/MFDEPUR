@@ -340,6 +340,59 @@ exports.updateOrderStatus = async (req, res) => {
   res.redirect(`/admin/orders/${order.id}?updated=1`);
 };
 
+// Admin override: approva/rifiuta un ordine AWAITING_APPROVAL
+async function _adminTransitionApproval(req, res, targetStatus, action) {
+  const order = await prisma.order.findUnique({
+    where: { id: req.params.id },
+    include: { user: true },
+  });
+  if (!order) return res.status(404).render('error', { message: 'Ordine non trovato', code: 404 });
+  if (order.status !== 'AWAITING_APPROVAL') {
+    return res.status(400).render('error', {
+      message: 'Ordine non in attesa di approvazione',
+      code: 400,
+    });
+  }
+  if (!ORDER_STATUS_TRANSITIONS.AWAITING_APPROVAL.includes(targetStatus)) {
+    return res.status(400).render('error', { message: 'Transizione non permessa', code: 400 });
+  }
+
+  const updated = await prisma.order.update({
+    where: { id: order.id },
+    data: { status: targetStatus },
+  });
+
+  await logAudit(req, {
+    action,
+    entityType: 'Order',
+    entityId: order.id,
+    metadata: {
+      from: 'AWAITING_APPROVAL',
+      to: targetStatus,
+      orderNumber: order.orderNumber,
+      adminOverride: true,
+    },
+  });
+
+  const tplName = targetStatus === 'PENDING' ? 'sendOrderApproved' : 'sendOrderRejected';
+  if (typeof emailUtil[tplName] === 'function' && order.user?.email) {
+    await emailUtil[tplName](updated, order.user).catch(err =>
+      logEmailFailure({
+        to: order.user.email,
+        subject: `Ordine ${order.orderNumber} ${targetStatus === 'PENDING' ? 'approvato' : 'rifiutato'}`,
+        templateName: tplName,
+        err,
+        context: { orderId: order.id },
+      })
+    );
+  }
+
+  return res.redirect(`/admin/orders/${order.id}?updated=1`);
+}
+
+exports.approveOrder = (req, res) => _adminTransitionApproval(req, res, 'PENDING', 'ORDER_APPROVE');
+exports.rejectOrder = (req, res) => _adminTransitionApproval(req, res, 'CANCELLED', 'ORDER_REJECT');
+
 // ── Aziende clienti ───────────────────────────────────────────────────────────
 
 exports.getCompanies = async (req, res) => {

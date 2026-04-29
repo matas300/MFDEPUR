@@ -28,6 +28,23 @@
 
     <%- include('../partials/_order-stepper', { order }) %>
 
+    <% if (order.status === 'AWAITING_APPROVAL') { %>
+      <div class="alert alert-warning" style="margin:1rem 0">
+        <h3 style="margin-top:0">Approvazione richiesta</h3>
+        <p>Ordine creato da <strong><%= order.user.firstName %> <%= order.user.lastName %></strong> per <%= order.company.name %>. In attesa di approvazione del responsabile aziendale; in alternativa puoi forzare l'esito come admin.</p>
+        <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+          <form method="POST" action="/admin/orders/<%= order.id %>/approve" style="margin:0">
+            <%- include('../partials/_csrf') %>
+            <button type="submit" class="btn btn-primary">Approva (override)</button>
+          </form>
+          <form method="POST" action="/admin/orders/<%= order.id %>/reject" style="margin:0">
+            <%- include('../partials/_csrf') %>
+            <button type="submit" class="btn btn-outline">Rifiuta (override)</button>
+          </form>
+        </div>
+      </div>
+    <% } %>
+
     <table class="order-items-table">
       <thead>
         <tr>

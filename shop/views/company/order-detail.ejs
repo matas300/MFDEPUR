@@ -1,0 +1,119 @@
+<%- include('../partials/_header', { title: title }) %>
+
+<div class="container">
+  <nav class="breadcrumb">
+    <a href="/company/orders">Ordini azienda</a>
+    <span>/</span>
+    <span><%= order.orderNumber %></span>
+  </nav>
+
+  <div class="order-detail-card">
+    <div class="order-detail-header">
+      <div>
+        <h1><%= order.orderNumber %></h1>
+        <p style="color:var(--text-muted);margin:0">
+          <%= new Date(order.createdAt).toLocaleDateString('it-IT', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }) %>
+        </p>
+      </div>
+      <span class="order-status order-status--<%= order.status.toLowerCase() %>"><%= order.status %></span>
+    </div>
+
+    <% if (order.status === 'AWAITING_APPROVAL') { %>
+      <div class="alert alert-warning" style="margin:1.25rem 0">
+        <h3 style="margin-top:0">Approvazione richiesta</h3>
+        <p>L'ordine è stato creato da <strong><%= order.user.firstName %> <%= order.user.lastName %></strong> e attende la tua approvazione prima di procedere al pagamento.</p>
+        <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.75rem">
+          <form method="POST" action="/company/orders/<%= order.id %>/approve" style="margin:0">
+            <%- include('../partials/_csrf') %>
+            <button type="submit" class="btn btn-primary">Approva ordine</button>
+          </form>
+          <form method="POST" action="/company/orders/<%= order.id %>/reject" style="margin:0">
+            <%- include('../partials/_csrf') %>
+            <button type="submit" class="btn btn-outline">Rifiuta ordine</button>
+          </form>
+        </div>
+      </div>
+    <% } %>
+
+    <table class="order-items-table">
+      <thead>
+        <tr>
+          <th scope="col">Prodotto</th>
+          <th scope="col">SKU</th>
+          <th scope="col">Qtà</th>
+          <th scope="col">Prezzo unit.</th>
+          <th scope="col">Totale</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% order.items.forEach(item => { %>
+          <tr>
+            <td><strong><%= item.productName %></strong></td>
+            <td><code><%= item.productSku %></code></td>
+            <td><%= item.quantity %> <%= item.unit %></td>
+            <td><%= formatEuro(item.unitPrice) %></td>
+            <td><%= formatEuro(item.total) %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="4" style="text-align:right">Subtotale</td>
+          <td><%= formatEuro(order.subtotal) %></td>
+        </tr>
+        <tr>
+          <td colspan="4" style="text-align:right">IVA 22%</td>
+          <td><%= formatEuro(order.taxAmount) %></td>
+        </tr>
+        <% if (parseFloat(order.shippingCost) > 0) { %>
+          <tr>
+            <td colspan="4" style="text-align:right">Spedizione</td>
+            <td><%= formatEuro(order.shippingCost) %></td>
+          </tr>
+        <% } %>
+        <tr class="order-total-row">
+          <td colspan="4" style="text-align:right"><strong>Totale</strong></td>
+          <td><strong><%= formatEuro(order.total) %></strong></td>
+        </tr>
+      </tfoot>
+    </table>
+
+    <div class="order-meta-grid">
+      <div>
+        <h4>Richiedente</h4>
+        <p style="color:var(--text-muted)">
+          <%= order.user.firstName %> <%= order.user.lastName %><br>
+          <a href="mailto:<%= order.user.email %>"><%= order.user.email %></a>
+        </p>
+      </div>
+      <% if (order.address) { %>
+        <div>
+          <h4>Spedizione a</h4>
+          <address style="font-style:normal;color:var(--text-muted)">
+            <%= order.company.name %><br>
+            <%= order.address.street %><br>
+            <%= order.address.postalCode %> <%= order.address.city %> (<%= order.address.province %>)
+          </address>
+        </div>
+      <% } %>
+      <div>
+        <h4>Pagamento</h4>
+        <p style="color:var(--text-muted)">
+          <%= order.paymentMethod === 'STRIPE' ? 'Carta di credito/debito' : 'Bonifico bancario' %>
+        </p>
+      </div>
+      <% if (order.notes) { %>
+        <div>
+          <h4>Note</h4>
+          <p style="color:var(--text-muted)"><%= order.notes %></p>
+        </div>
+      <% } %>
+    </div>
+  </div>
+
+  <div style="margin-top:1.5rem;display:flex;gap:.75rem;flex-wrap:wrap">
+    <a href="/company/orders" class="btn btn-outline">← Tutti gli ordini azienda</a>
+  </div>
+</div>
+
+<%- include('../partials/_footer') %>

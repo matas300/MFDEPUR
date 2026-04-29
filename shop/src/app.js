@@ -183,6 +183,7 @@ app.use('/auth', require('./routes/auth'));
 app.use('/shop', require('./routes/shop'));
 app.use('/account', require('./routes/account'));
 app.use('/admin', require('./routes/admin'));
+app.use('/company', require('./routes/company'));
 
 // Pagine statiche
 app.get('/privacy', (req, res) => res.render('privacy', { title: 'Privacy Policy' }));

@@ -52,6 +52,11 @@
             <i class="fa-solid fa-screwdriver-wrench"></i> Admin
           </a>
         <% } %>
+        <% if (currentUser.companyRole === 'COMPANY_ADMIN' && currentUser.role !== 'ADMIN') { %>
+          <a href="/company/orders" class="shop-nav-link <%= currentPath.startsWith('/company') ? 'active' : '' %>">
+            <i class="fa-solid fa-clipboard-check"></i> Ordini azienda
+          </a>
+        <% } %>
         <a href="/account" class="shop-nav-link <%= currentPath.startsWith('/account') ? 'active' : '' %>">
           <i class="fa-solid fa-user"></i> Account
         </a>
@@ -92,6 +97,9 @@
     <% if (currentUser) { %>
       <% if (currentUser.role === 'ADMIN') { %>
         <a href="/admin" class="shop-mobile-link">Admin</a>
+      <% } %>
+      <% if (currentUser.companyRole === 'COMPANY_ADMIN' && currentUser.role !== 'ADMIN') { %>
+        <a href="/company/orders" class="shop-mobile-link">Ordini azienda</a>
       <% } %>
       <a href="/account" class="shop-mobile-link">Il mio account</a>
       <a href="/shop/cart" class="shop-mobile-link">Carrello<span id="mobileCartCount"><% if (cartCount > 0) { %> (<%= cartCount %>)<% } %></span></a>

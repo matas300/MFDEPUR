@@ -179,6 +179,32 @@ async function sendOrderShipped(order, user) {
   });
 }
 
+async function sendOrderApproved(order, buyer) {
+  const url = `${process.env.BASE_URL}/account/orders/${order.id}`;
+  await sendMail({
+    to: buyer.email,
+    subject: `Ordine ${order.orderNumber} approvato`,
+    html: emailWrapper(`
+      <h2>Ordine approvato</h2>
+      <p>Ciao ${buyer.firstName}, l'ordine <strong>#${order.orderNumber}</strong> è stato approvato dal responsabile della tua azienda. Ora puoi procedere al pagamento dal tuo account.</p>
+      <a href="${url}" class="btn">Vai all'ordine</a>
+    `),
+  });
+}
+
+async function sendOrderRejected(order, buyer) {
+  const url = `${process.env.BASE_URL}/account/orders/${order.id}`;
+  await sendMail({
+    to: buyer.email,
+    subject: `Ordine ${order.orderNumber} rifiutato`,
+    html: emailWrapper(`
+      <h2>Ordine rifiutato</h2>
+      <p>Ciao ${buyer.firstName}, l'ordine <strong>#${order.orderNumber}</strong> è stato rifiutato dal responsabile della tua azienda e annullato.</p>
+      <a href="${url}" class="btn">Dettagli ordine</a>
+    `),
+  });
+}
+
 module.exports = {
   sendWelcome,
   sendCompanyApproved,
@@ -186,5 +212,7 @@ module.exports = {
   sendPasswordReset,
   sendNewOrderNotificationAdmin,
   sendOrderAwaitingApproval,
+  sendOrderApproved,
+  sendOrderRejected,
   sendOrderShipped,
 };
