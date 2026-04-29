@@ -35,24 +35,34 @@ exports.getOrderDetail = async (req, res) => {
 };
 
 async function _transitionApproval(req, res, targetStatus, action) {
-  const order = await prisma.order.findFirst({
-    where: { id: req.params.id, companyId: req.user.companyId, status: 'AWAITING_APPROVAL' },
-    include: { user: true },
-  });
-  if (!order) {
-    return res.status(404).render('error', {
-      message: 'Ordine non trovato o non in attesa di approvazione',
-      code: 404,
-    });
-  }
-
+  // Valida transizione PRIMA dell'updateMany (4xx esplicito vs. silent no-op)
   if (!ORDER_STATUS_TRANSITIONS.AWAITING_APPROVAL.includes(targetStatus)) {
     return res.status(400).render('error', { message: 'Transizione non permessa', code: 400 });
   }
 
-  const updated = await prisma.order.update({
-    where: { id: order.id },
+  // Update atomico: previene race condition tra approver concorrenti.
+  // Se result.count === 0 → l'ordine non esiste, non è della company, oppure
+  // è già stato transitato da un altro approver.
+  const result = await prisma.order.updateMany({
+    where: {
+      id: req.params.id,
+      companyId: req.user.companyId,
+      status: 'AWAITING_APPROVAL',
+    },
     data: { status: targetStatus },
+  });
+
+  if (result.count === 0) {
+    return res.status(404).render('error', {
+      message: 'Ordine non trovato o già processato',
+      code: 404,
+    });
+  }
+
+  // Re-leggi l'ordine (con user) per audit + email
+  const order = await prisma.order.findUnique({
+    where: { id: req.params.id },
+    include: { user: true },
   });
 
   await logAudit(req, {
@@ -65,7 +75,7 @@ async function _transitionApproval(req, res, targetStatus, action) {
   // Email al BUYER
   const tplName = targetStatus === 'PENDING' ? 'sendOrderApproved' : 'sendOrderRejected';
   if (typeof emailUtil[tplName] === 'function' && order.user?.email) {
-    await emailUtil[tplName](updated, order.user).catch(err =>
+    await emailUtil[tplName](order, order.user).catch(err =>
       logEmailFailure({
         to: order.user.email,
         subject: `Ordine ${order.orderNumber} ${targetStatus === 'PENDING' ? 'approvato' : 'rifiutato'}`,
