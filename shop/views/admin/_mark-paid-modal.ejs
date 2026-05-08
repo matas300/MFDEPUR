@@ -1,0 +1,51 @@
+<div id="mark-paid-modal" class="mark-paid-modal" hidden>
+  <div class="mark-paid-modal__backdrop js-modal-close"></div>
+  <div class="mark-paid-modal__content" role="dialog" aria-labelledby="mark-paid-title" aria-modal="true">
+    <h3 id="mark-paid-title" style="margin-top:0">Marca pagato — Ordine <%= order.orderNumber %></h3>
+    <form method="POST" action="/admin/orders/<%= order.id %>/mark-paid" class="mark-paid-form">
+      <%- include('../partials/_csrf') %>
+      <label style="display:block;margin-bottom:.75rem">
+        <span style="display:block;font-weight:600">Data pagamento</span>
+        <input type="date" name="paidAt" value="<%= new Date().toISOString().slice(0, 10) %>" required style="width:100%">
+      </label>
+      <label style="display:block;margin-bottom:.75rem">
+        <span style="display:block;font-weight:600">CRO bonifico (opzionale)</span>
+        <input type="text" name="paymentReference" maxlength="64" placeholder="es. ABC123CRO456" style="width:100%">
+      </label>
+      <p>Importo atteso: <strong>€ <%= Number(order.total).toFixed(2) %></strong></p>
+      <p style="color:var(--text-muted);font-size:.85rem">
+        Conferma solo dopo verifica visiva su estratto conto. La marcatura non è facilmente reversibile.
+      </p>
+      <div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:1rem">
+        <button type="button" class="btn btn-outline js-modal-close">Annulla</button>
+        <button type="submit" class="btn btn-primary">Conferma pagamento</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<style nonce="<%= cspNonce %>">
+.mark-paid-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.mark-paid-modal[hidden] { display: none; }
+.mark-paid-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+}
+.mark-paid-modal__content {
+  position: relative;
+  background: #fff;
+  padding: 1.5rem;
+  border-radius: 8px;
+  max-width: 480px;
+  width: 90%;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+</style>

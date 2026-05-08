@@ -787,6 +787,21 @@ document.addEventListener('submit', (e) => {
   onScroll();
 })();
 
+// ── Admin: mark-paid modal (open/close + Escape + backdrop) ──────────────────
+(function initMarkPaidModal() {
+  const openBtn = document.querySelector('.js-open-mark-paid');
+  const modal = document.getElementById('mark-paid-modal');
+  if (!openBtn || !modal) return;
+
+  openBtn.addEventListener('click', () => { modal.hidden = false; });
+  modal.querySelectorAll('.js-modal-close').forEach(el =>
+    el.addEventListener('click', () => { modal.hidden = true; })
+  );
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !modal.hidden) modal.hidden = true;
+  });
+})();
+
 // ── Delegated handlers per sostituire inline JS (CSP nonce) ────────────────────
 (function initCspSafeHandlers() {
   // Select/input con classe js-auto-submit → submit automatico del form contenitore

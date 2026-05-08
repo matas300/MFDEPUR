@@ -45,6 +45,14 @@
       </div>
     <% } %>
 
+    <% if (order.status === 'PENDING_PAYMENT') { %>
+      <div class="alert alert-info" style="margin:1rem 0">
+        <h3 style="margin-top:0">In attesa di pagamento</h3>
+        <p>Ordine in attesa di bonifico. Verifica l'estratto conto e marca come pagato quando il bonifico è ricevuto.</p>
+        <button type="button" class="btn btn-primary js-open-mark-paid">Marca pagato</button>
+      </div>
+    <% } %>
+
     <table class="order-items-table">
       <thead>
         <tr>
@@ -156,5 +164,9 @@
 
   </div>
 </div>
+
+<% if (order.status === 'PENDING_PAYMENT') { %>
+  <%- include('./_mark-paid-modal', { order }) %>
+<% } %>
 
 <%- include('../partials/_admin-footer') %>
