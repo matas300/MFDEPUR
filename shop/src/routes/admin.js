@@ -16,6 +16,7 @@ router.get('/orders/:id', asyncHandler(adminCtrl.getOrderDetail));
 router.post('/orders/:id/status', asyncHandler(adminCtrl.updateOrderStatus));
 router.post('/orders/:id/approve', asyncHandler(adminCtrl.approveOrder));
 router.post('/orders/:id/reject', asyncHandler(adminCtrl.rejectOrder));
+router.post('/orders/:id/mark-paid', asyncHandler(adminCtrl.markOrderAsPaid));
 
 // Aziende clienti
 router.get('/companies', asyncHandler(adminCtrl.getCompanies));

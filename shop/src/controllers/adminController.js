@@ -399,6 +399,104 @@ async function _adminTransitionApproval(req, res, targetStatus, action) {
 exports.approveOrder = (req, res) => _adminTransitionApproval(req, res, 'PENDING_PAYMENT', 'ORDER_APPROVE');
 exports.rejectOrder = (req, res) => _adminTransitionApproval(req, res, 'CANCELLED', 'ORDER_REJECT');
 
+// POST /admin/orders/:id/mark-paid — riconciliazione bonifico
+// Atomica: PENDING_PAYMENT → CONFIRMED + decrement stock per ogni item + paymentReference + paidAt
+exports.markOrderAsPaid = async (req, res) => {
+  const { id } = req.params;
+  const { paymentReference, paidAt } = req.body;
+
+  const order = await prisma.order.findUnique({
+    where: { id },
+    include: { items: true, user: true },
+  });
+  if (!order) {
+    return res.status(404).render('error', { message: 'Ordine non trovato', code: 404 });
+  }
+  if (order.status !== 'PENDING_PAYMENT') {
+    return res.status(409).render('error', {
+      message: `Impossibile marcare pagato: ordine in stato ${order.status}`,
+      code: 409,
+    });
+  }
+
+  // Parse paidAt: se YYYY-MM-DD, fissa ora locale a 00:00 (evita off-by-one timezone)
+  let paidDate;
+  if (paidAt) {
+    const d = /^\d{4}-\d{2}-\d{2}$/.test(String(paidAt))
+      ? new Date(`${paidAt}T00:00:00`)
+      : new Date(paidAt);
+    paidDate = isNaN(d) ? new Date() : d;
+  } else {
+    paidDate = new Date();
+  }
+
+  const refClean = paymentReference ? String(paymentReference).trim().slice(0, 100) : null;
+
+  // Atomico: decrementa stock di ogni item + aggiorna ordine, in transazione singola.
+  // updateMany con WHERE stock>=qty previene oversell anche con concorrenza.
+  try {
+    await prisma.$transaction(async (tx) => {
+      for (const item of order.items) {
+        const upd = await tx.product.updateMany({
+          where: { id: item.productId, stock: { gte: item.quantity } },
+          data: { stock: { decrement: item.quantity } },
+        });
+        if (upd.count === 0) {
+          const err = new Error(`Stock insufficiente per ${item.productName}`);
+          err.code = 'INSUFFICIENT_STOCK';
+          throw err;
+        }
+      }
+      await tx.order.update({
+        where: { id },
+        data: {
+          status: 'CONFIRMED',
+          paidAt: paidDate,
+          paymentReference: refClean || null,
+        },
+      });
+    });
+  } catch (err) {
+    if (err.code === 'INSUFFICIENT_STOCK') {
+      return res.status(409).render('error', { message: err.message, code: 409 });
+    }
+    throw err;
+  }
+
+  await logAudit(req, {
+    action: 'PAYMENT_CONFIRMED',
+    entityType: 'Order',
+    entityId: id,
+    metadata: {
+      paymentReference: refClean || null,
+      paidAt: paidDate.toISOString(),
+      oldStatus: 'PENDING_PAYMENT',
+      newStatus: 'CONFIRMED',
+      orderNumber: order.orderNumber,
+    },
+  });
+
+  // Email cliente "pagamento ricevuto" — failure non blocca (logEmailFailure)
+  const updated = await prisma.order.findUnique({
+    where: { id },
+    include: { user: true },
+  });
+  if (updated.user?.email) {
+    await emailUtil.sendPaymentReceived(updated, updated.user).catch(err =>
+      logEmailFailure({
+        to: updated.user.email,
+        subject: `Pagamento ricevuto — ordine ${updated.orderNumber}`,
+        templateName: 'sendPaymentReceived',
+        err,
+        context: { orderId: id },
+      })
+    );
+  }
+
+  if (req.accepts('json')) return res.json({ ok: true, status: 'CONFIRMED' });
+  return res.redirect(`/admin/orders/${id}?paid=1`);
+};
+
 // ── Aziende clienti ───────────────────────────────────────────────────────────
 
 exports.getCompanies = async (req, res) => {
