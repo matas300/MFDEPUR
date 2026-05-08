@@ -253,7 +253,16 @@ exports.checkoutSuccess = async (req, res) => {
     include: { items: { include: { product: true } }, address: true, company: true },
   });
   if (!order || order.userId !== req.user.id) return res.redirect('/shop');
-  res.render('shop/order-success', { order, title: 'Ordine confermato' });
+  res.render('shop/order-success', {
+    order,
+    title: 'Ordine confermato',
+    bank: {
+      beneficiary: process.env.BANK_BENEFICIARY,
+      iban: process.env.BANK_IBAN,
+      name: process.env.BANK_NAME,
+      bic: process.env.BANK_BIC || null,
+    },
+  });
 };
 
 // GET /shop/checkout/cancel
