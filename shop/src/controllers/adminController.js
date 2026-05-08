@@ -35,10 +35,10 @@ exports.getDashboard = async (req, res) => {
     ordersWeek,
     awaitingApproval,
   ] = await Promise.all([
-    prisma.order.count({ where: { status: { notIn: ['PENDING', 'PAYMENT_FAILED', 'CANCELLED', 'AWAITING_APPROVAL'] } } }),
-    prisma.order.count({ where: { createdAt: { gte: startOfMonth }, status: { notIn: ['PENDING', 'PAYMENT_FAILED', 'CANCELLED', 'AWAITING_APPROVAL'] } } }),
-    prisma.order.aggregate({ _sum: { total: true }, where: { status: { notIn: ['PENDING', 'PAYMENT_FAILED', 'CANCELLED', 'AWAITING_APPROVAL'] } } }),
-    prisma.order.aggregate({ _sum: { total: true }, where: { createdAt: { gte: startOfMonth }, status: { notIn: ['PENDING', 'PAYMENT_FAILED', 'CANCELLED', 'AWAITING_APPROVAL'] } } }),
+    prisma.order.count({ where: { status: { notIn: ['PENDING_PAYMENT', 'CANCELLED', 'AWAITING_APPROVAL'] } } }),
+    prisma.order.count({ where: { createdAt: { gte: startOfMonth }, status: { notIn: ['PENDING_PAYMENT', 'CANCELLED', 'AWAITING_APPROVAL'] } } }),
+    prisma.order.aggregate({ _sum: { total: true }, where: { status: { notIn: ['PENDING_PAYMENT', 'CANCELLED', 'AWAITING_APPROVAL'] } } }),
+    prisma.order.aggregate({ _sum: { total: true }, where: { createdAt: { gte: startOfMonth }, status: { notIn: ['PENDING_PAYMENT', 'CANCELLED', 'AWAITING_APPROVAL'] } } }),
     prisma.company.count({ where: { status: 'PENDING' } }),
     prisma.product.count({ where: { isActive: true } }),
     prisma.$queryRaw`SELECT id, name, sku, stock, "lowStockAlert" FROM "Product" WHERE "isActive" = true AND stock <= "lowStockAlert" LIMIT 10`,
@@ -48,14 +48,14 @@ exports.getDashboard = async (req, res) => {
       include: { company: true, user: { select: { firstName: true, lastName: true } } },
     }),
     prisma.order.findMany({
-      where: { createdAt: { gte: thirtyDaysAgo }, status: { notIn: ['PENDING', 'PAYMENT_FAILED', 'CANCELLED', 'AWAITING_APPROVAL'] } },
+      where: { createdAt: { gte: thirtyDaysAgo }, status: { notIn: ['PENDING_PAYMENT', 'CANCELLED', 'AWAITING_APPROVAL'] } },
       select: { createdAt: true, total: true },
     }),
     prisma.order.count({
-      where: { createdAt: { gte: startOfDay }, status: { notIn: ['PENDING', 'PAYMENT_FAILED', 'CANCELLED', 'AWAITING_APPROVAL'] } },
+      where: { createdAt: { gte: startOfDay }, status: { notIn: ['PENDING_PAYMENT', 'CANCELLED', 'AWAITING_APPROVAL'] } },
     }),
     prisma.order.count({
-      where: { createdAt: { gte: startOfWeek }, status: { notIn: ['PENDING', 'PAYMENT_FAILED', 'CANCELLED', 'AWAITING_APPROVAL'] } },
+      where: { createdAt: { gte: startOfWeek }, status: { notIn: ['PENDING_PAYMENT', 'CANCELLED', 'AWAITING_APPROVAL'] } },
     }),
     prisma.order.count({ where: { status: 'AWAITING_APPROVAL' } }),
   ]);
@@ -215,7 +215,7 @@ exports.exportOrdersCSV = async (req, res) => {
     parseFloat(o.taxAmount).toFixed(2),
     parseFloat(o.shippingCost).toFixed(2),
     parseFloat(o.total).toFixed(2),
-    o.paymentMethod === 'STRIPE' ? 'Carta' : 'Bonifico',
+    'Bonifico',
     o.paidAt ? new Date(o.paidAt).toISOString() : '',
     o.shippedAt ? new Date(o.shippedAt).toISOString() : '',
     o.deliveredAt ? new Date(o.deliveredAt).toISOString() : '',
