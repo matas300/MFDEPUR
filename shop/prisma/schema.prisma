@@ -165,9 +165,10 @@ model Order {
   company         Company   @relation(fields: [companyId], references: [id])
   addressId       String?
   address         Address?  @relation(fields: [addressId], references: [id])
-  status          String    @default("PENDING") // AWAITING_APPROVAL, PENDING, PAYMENT_FAILED, CONFIRMED, PROCESSING, SHIPPED, DELIVERED, CANCELLED, REFUNDED
-  paymentMethod   String    @default("STRIPE")  // STRIPE, BANK_TRANSFER
-  paymentIntentId String?
+  status          String    @default("PENDING_PAYMENT") // PENDING_PAYMENT, AWAITING_APPROVAL, CONFIRMED, PROCESSING, SHIPPED, DELIVERED, CANCELLED, REFUNDED
+  paymentMethod   String    @default("BANK_TRANSFER")  // estensibile in futuro
+  paymentIntentId String?                              // legacy, rimuoveremo dopo cleanup ordini storici
+  paymentReference String?                             // CRO bonifico (admin lo inserisce alla riconciliazione)
   subtotal        Decimal
   taxRate         Decimal   @default(0.22)
   taxAmount       Decimal
