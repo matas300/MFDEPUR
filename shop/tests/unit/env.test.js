@@ -58,4 +58,40 @@ describe('env validator', () => {
     });
     expect(r.status).toBe(0);
   });
+
+  it('fail-fast se BANK_IBAN mancante', () => {
+    const r = runEnv({
+      JWT_SECRET: 'x'.repeat(32),
+      JWT_REFRESH_SECRET: 'x'.repeat(32),
+      CSRF_SECRET: 'x'.repeat(32),
+      JWT_EXPIRES_IN: '15m',
+      JWT_REFRESH_EXPIRES_IN: '7d',
+      BANK_BENEFICIARY: 'Test',
+      // BANK_IBAN omitted
+      BANK_NAME: 'Test',
+      ACCOUNTANT_EMAIL: 'x@x.x',
+      ACCOUNTANT_NAME: 'Test',
+      DATABASE_URL: 'file:./x.db',
+    });
+    expect(r.status).toBe(1);
+    expect(r.stderr).toMatch(/BANK_IBAN/);
+  });
+
+  it('fail-fast se ACCOUNTANT_EMAIL mancante', () => {
+    const r = runEnv({
+      JWT_SECRET: 'x'.repeat(32),
+      JWT_REFRESH_SECRET: 'x'.repeat(32),
+      CSRF_SECRET: 'x'.repeat(32),
+      JWT_EXPIRES_IN: '15m',
+      JWT_REFRESH_EXPIRES_IN: '7d',
+      BANK_BENEFICIARY: 'Test',
+      BANK_IBAN: 'IT00 X000 0000 0000',
+      BANK_NAME: 'Test',
+      // ACCOUNTANT_EMAIL omitted
+      ACCOUNTANT_NAME: 'Test',
+      DATABASE_URL: 'file:./x.db',
+    });
+    expect(r.status).toBe(1);
+    expect(r.stderr).toMatch(/ACCOUNTANT_EMAIL/);
+  });
 });
