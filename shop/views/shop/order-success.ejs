@@ -10,6 +10,24 @@
       </p>
     </div>
 
+    <% if (order.status === 'PENDING_PAYMENT' && typeof bank !== 'undefined' && bank) { %>
+    <section class="bank-transfer-instructions" style="background:#f6f7f9;padding:1.5rem;border-radius:8px;margin:1.5rem 0;border-left:4px solid #0a3d8f">
+      <h2 style="margin-top:0">Effettua il bonifico</h2>
+      <p>Per completare l'ordine, esegui un bonifico ai dati indicati. Riceverai via email anche queste istruzioni. La spedizione partirà entro 2 giorni lavorativi dalla ricezione del pagamento.</p>
+      <table style="width:100%;max-width:520px;border-collapse:collapse">
+        <tr><td style="padding:.5rem;font-weight:600;width:140px">Beneficiario</td><td style="padding:.5rem"><%= bank.beneficiary %></td></tr>
+        <tr><td style="padding:.5rem;font-weight:600">IBAN</td><td style="padding:.5rem"><code style="font-family:monospace"><%= bank.iban %></code></td></tr>
+        <tr><td style="padding:.5rem;font-weight:600">Banca</td><td style="padding:.5rem"><%= bank.name %></td></tr>
+        <% if (bank.bic) { %>
+        <tr><td style="padding:.5rem;font-weight:600">BIC</td><td style="padding:.5rem"><%= bank.bic %></td></tr>
+        <% } %>
+        <tr><td style="padding:.5rem;font-weight:600">Causale</td><td style="padding:.5rem"><code style="font-family:monospace"><%= order.orderNumber %></code></td></tr>
+        <tr><td style="padding:.5rem;font-weight:600">Importo</td><td style="padding:.5rem"><strong>€ <%= Number(order.total).toFixed(2) %></strong></td></tr>
+      </table>
+      <p style="font-size:.85rem;color:#666;margin-top:1rem">In caso di mancata ricezione del pagamento entro 7 giorni, l'ordine sarà annullato automaticamente.</p>
+    </section>
+    <% } %>
+
     <div class="order-detail-card">
       <div class="order-detail-header">
         <div>

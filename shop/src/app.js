@@ -15,7 +15,6 @@ const {
   doubleCsrfProtection,
   csrfErrorHandler,
 } = require('./middleware/csrf');
-const orderCtrl = require('./controllers/orderController');
 const format = require('./utils/format');
 
 const app = express();
@@ -26,8 +25,7 @@ app.use(observability.requestHandler()); // no-op se Sentry disabilitato
 const IS_PROD = process.env.NODE_ENV === 'production';
 
 // ── HTTP request logging strutturato (correlation-id via req.id) ──────────────
-// Deve stare PRIMA del mount /stripe/webhook così tutti i request (anche il
-// webhook) vengono loggati. `pino-http` genera `req.id` (UUID) a ogni request.
+// pino-http: correlation-id (req.id UUID) e logging strutturato per ogni request.
 app.use(pinoHttp({
   logger,
   customProps: () => ({ env: process.env.NODE_ENV || 'development' }),
@@ -49,7 +47,7 @@ if (IS_PROD) {
 }
 
 // ── Redirect HTTPS in prod ────────────────────────────────────────────────────
-// Applicato PRIMA del webhook Stripe: anche i webhook devono arrivare in HTTPS.
+// HTTPS obbligatorio in produzione (HSTS preload + redirect 301).
 if (IS_PROD) {
   app.use((req, res, next) => {
     if (req.secure || req.headers['x-forwarded-proto'] === 'https') return next();
@@ -57,16 +55,12 @@ if (IS_PROD) {
   });
 }
 
-// ── Stripe webhook (deve ricevere rawBody PRIMA di express.json) ──────────────
-app.post('/stripe/webhook',
-  express.raw({ type: 'application/json' }),
-  (req, res, next) => { req.rawBody = req.body; next(); },
-  orderCtrl.stripeWebhook
-);
+// ── Stripe rimosso (bonifico-only) ────────────────────────────────────────────
+// Storico: prima del refactor 2026-05-08 qui era montato POST /stripe/webhook con
+// rawBody capture. Lo shop accetta solo bonifico bancario (vedi DEPLOYMENT.md).
 
 // ── Compression ───────────────────────────────────────────────────────────────
-// DOPO il webhook Stripe (rawBody non va compresso in ingresso; in uscita il
-// webhook risponde con piccolo JSON, non serve compressione). PRIMA di Helmet.
+// Compression PRIMA di Helmet, threshold 1KB.
 app.use(compression({
   // Non comprimere risposte sotto 1KB (overhead > benefit)
   threshold: 1024,
@@ -89,7 +83,6 @@ app.use(helmet({
       scriptSrc: [
         "'self'",
         (req, res) => `'nonce-${res.locals.cspNonce}'`,
-        'js.stripe.com',
         'cdn.jsdelivr.net',
         'unpkg.com',
         'cdnjs.cloudflare.com',
@@ -109,9 +102,8 @@ app.use(helmet({
       // rigorosa sui <style> block (più pericolosi) consentendo gli attribute inline.
       styleSrcAttr: ["'unsafe-inline'"],
       fontSrc: ["'self'", 'fonts.gstatic.com', 'cdnjs.cloudflare.com', 'data:'],
-      frameSrc: ['js.stripe.com'],
       imgSrc: ["'self'", 'data:', 'mfdepur.com', 'www.mfdepur.com', 'https:'],
-      connectSrc: ["'self'", 'api.stripe.com'],
+      connectSrc: ["'self'"],
     },
   },
   // HSTS: 1 anno, includeSubDomains, preload. Attivo solo in prod — in dev
@@ -129,7 +121,6 @@ app.use(cookieParser());
 app.use('/', require('./routes/health'));
 
 // ── CSRF protection (double-submit cookie) ────────────────────────────────────
-// Escluso da /stripe/webhook (montato prima di questo middleware)
 app.use(ensureCsrfSession);
 app.use(doubleCsrfProtection);
 app.use(injectCsrfToken);

@@ -1,6 +1,5 @@
 <%- include('../partials/_header', {
-  title: 'Checkout',
-  extraHead: '<script src="https://js.stripe.com/v3/"></script>'
+  title: 'Checkout'
 }) %>
 
 <div class="container">
@@ -22,8 +21,10 @@
   <div class="checkout-layout">
     <!-- Form -->
     <div class="checkout-form">
-      <form id="checkout-form">
+      <form id="checkout-form" method="POST" action="/shop/checkout">
+        <%- include('../partials/_csrf') %>
         <input type="hidden" name="idempotencyKey" value="<%= typeof idempotencyKey !== 'undefined' ? idempotencyKey : '' %>">
+        <input type="hidden" name="paymentMethod" value="BANK_TRANSFER">
 
         <!-- Indirizzo di spedizione -->
         <div class="checkout-section">
@@ -84,48 +85,22 @@
           </div>
         </div>
 
-        <!-- Metodo di pagamento -->
+        <!-- Pagamento (solo bonifico) -->
         <div class="checkout-section">
-          <h3>Metodo di pagamento</h3>
-          <div class="payment-methods">
-            <label class="payment-method-option">
-              <input type="radio" name="paymentMethod" value="STRIPE" checked id="pm-stripe">
-              <span>
-                <strong>Carta di credito / debito</strong>
-                <small>Pagamento sicuro tramite Stripe</small>
-              </span>
-            </label>
-            <label class="payment-method-option">
-              <input type="radio" name="paymentMethod" value="BANK_TRANSFER" id="pm-bank">
-              <span>
-                <strong>Bonifico bancario</strong>
-                <small>Riceverai le coordinate bancarie via email</small>
-              </span>
-            </label>
-          </div>
-
-          <div id="stripe-fields" style="margin-top:1.25rem">
-            <div class="form-group">
-              <label>Dati carta</label>
-              <div id="card-element" class="stripe-card-element"></div>
-              <div id="card-errors" role="alert" class="form-error" style="display:none"></div>
-            </div>
+          <h3>Modalità di pagamento</h3>
+          <div class="alert alert-info" style="margin:0">
+            <p style="margin:0 0 .5rem 0"><strong>Bonifico bancario</strong></p>
+            <p style="margin:0;font-size:.9rem">Dopo la conferma dell'ordine riceverai via email i dati per effettuare il bonifico (IBAN, causale, importo). La spedizione partirà entro 2 giorni lavorativi dalla ricezione del pagamento.</p>
           </div>
         </div>
 
         <div id="checkout-error" class="alert alert-danger" style="display:none"></div>
 
-        <p class="checkout-3ds-hint" style="color:#666; font-size:13px; margin:12px 0;">
-          <span aria-hidden="true">🔒</span>
-          Pagamento sicuro tramite Stripe. La tua banca potrebbe chiederti un'autenticazione
-          aggiuntiva (codice SMS o app 3D Secure) per confermare il pagamento.
-        </p>
-
         <button type="submit" class="btn btn-primary btn-block btn-lg" id="submit-btn">
-          Conferma e paga <%= formatEuro(totals.total) %>
+          Conferma ordine — <%= formatEuro(totals.total) %>
         </button>
         <p style="font-size:0.8rem;color:var(--text-muted);margin-top:0.5rem;text-align:center">
-          Pagamento sicuro. Cliccando "Conferma" accetti le condizioni di acquisto.
+          Cliccando "Conferma ordine" accetti le condizioni di acquisto.
         </p>
       </form>
     </div>
@@ -166,9 +141,6 @@
   </div>
 </div>
 
-<script nonce="<%= typeof cspNonce !== 'undefined' ? cspNonce : '' %>">
-  window.STRIPE_KEY = '<%= stripePublicKey %>';
-</script>
-<script src="/js/checkout.js"></script>
+<script src="/js/checkout.js" nonce="<%= typeof cspNonce !== 'undefined' ? cspNonce : '' %>"></script>
 
 <%- include('../partials/_footer') %>

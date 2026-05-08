@@ -28,6 +28,10 @@ async function start() {
       observability.captureException(err, { where: 'server.listen' });
       process.exit(1);
     });
+
+    // ── Scheduler (cron jobs in-process) ──────────────────────────────────────
+    const { startScheduler } = require('./src/jobs/scheduler');
+    startScheduler();
   } catch (err) {
     console.error('❌ Errore avvio server:', err);
     observability.captureException(err, { where: 'start' });

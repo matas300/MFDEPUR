@@ -81,12 +81,19 @@ async function sendOrderConfirmation(order, user) {
       <td>€${Number(i.total).toFixed(2)}</td>
     </tr>`).join('');
 
+  const bicLine = process.env.BANK_BIC
+    ? `<tr><td>BIC</td><td>${process.env.BANK_BIC}</td></tr>`
+    : '';
+
   await sendMail({
     to: user.email,
-    subject: `Ordine confermato #${order.orderNumber}`,
+    subject: `Ordine ricevuto #${order.orderNumber} — istruzioni pagamento`,
     html: emailWrapper(`
-      <h2>Ordine confermato!</h2>
+      <h2>Ordine ricevuto</h2>
       <p>Ciao ${user.firstName}, abbiamo ricevuto il tuo ordine <strong>#${order.orderNumber}</strong>.</p>
+      <p>Per completarlo effettua il bonifico ai dati indicati sotto. La spedizione partirà entro 2 giorni lavorativi dalla ricezione del pagamento.</p>
+
+      <h3 style="margin-top:24px">Dettaglio ordine</h3>
       <table>
         <thead><tr><th>Prodotto</th><th>Qtà</th><th>Prezzo unit.</th><th>Totale</th></tr></thead>
         <tbody>${itemsHtml}</tbody>
@@ -95,8 +102,44 @@ async function sendOrderConfirmation(order, user) {
         <tr><td>Subtotale</td><td>€${Number(order.subtotal).toFixed(2)}</td></tr>
         <tr><td>IVA (22%)</td><td>€${Number(order.taxAmount).toFixed(2)}</td></tr>
         <tr><td>Spedizione</td><td>€${Number(order.shippingCost).toFixed(2)}</td></tr>
+        <tr class="total"><td><strong>Totale da pagare</strong></td><td><strong>€${Number(order.total).toFixed(2)}</strong></td></tr>
+      </table>
+
+      <h3 style="margin-top:24px">Istruzioni bonifico</h3>
+      <table>
+        <tr><td>Beneficiario</td><td>${process.env.BANK_BENEFICIARY}</td></tr>
+        <tr><td>IBAN</td><td><code>${process.env.BANK_IBAN}</code></td></tr>
+        <tr><td>Banca</td><td>${process.env.BANK_NAME}</td></tr>
+        ${bicLine}
+        <tr><td>Causale</td><td><code>${order.orderNumber}</code></td></tr>
+        <tr><td>Importo</td><td><strong>€${Number(order.total).toFixed(2)}</strong></td></tr>
+      </table>
+      <p style="color:#666;font-size:13px">In caso di mancata ricezione del pagamento entro 7 giorni l'ordine sarà annullato automaticamente.</p>
+
+      <a href="${process.env.BASE_URL}/account/orders/${order.id}" class="btn">Dettaglio ordine</a>
+    `),
+  });
+}
+
+async function sendPaymentReceived(order, user) {
+  const paidDate = order.paidAt
+    ? new Date(order.paidAt).toLocaleDateString('it-IT')
+    : new Date().toLocaleDateString('it-IT');
+
+  await sendMail({
+    to: user.email,
+    subject: `Pagamento ricevuto — ordine ${order.orderNumber} in preparazione`,
+    html: emailWrapper(`
+      <h2>Pagamento ricevuto</h2>
+      <p>Ciao ${user.firstName}, abbiamo ricevuto il bonifico per l'ordine <strong>#${order.orderNumber}</strong>.</p>
+      <p>L'ordine è ora in preparazione e verrà spedito a breve. Riceverai una nuova email quando sarà partito, con i riferimenti per il tracking.</p>
+
+      <table>
+        <tr><td>Numero ordine</td><td><strong>${order.orderNumber}</strong></td></tr>
+        <tr><td>Data pagamento</td><td>${paidDate}</td></tr>
         <tr class="total"><td><strong>Totale</strong></td><td><strong>€${Number(order.total).toFixed(2)}</strong></td></tr>
       </table>
+
       <a href="${process.env.BASE_URL}/account/orders/${order.id}" class="btn">Dettaglio ordine</a>
     `),
   });
@@ -215,4 +258,5 @@ module.exports = {
   sendOrderApproved,
   sendOrderRejected,
   sendOrderShipped,
+  sendPaymentReceived,
 };

@@ -12,26 +12,28 @@ const CARRIERS = Object.freeze(['DHL', 'GLS', 'SDA', 'BRT', 'UPS', 'FEDEX', 'POS
 
 // Stati Order (schema.prisma:166 + business rules)
 const ORDER_STATUSES = Object.freeze([
-  'AWAITING_APPROVAL', 'PENDING', 'PAYMENT_FAILED', 'CONFIRMED', 'PROCESSING',
+  'AWAITING_APPROVAL', 'PENDING_PAYMENT', 'CONFIRMED', 'PROCESSING',
   'SHIPPED', 'DELIVERED', 'CANCELLED', 'REFUNDED',
 ]);
 
-// Transizioni permesse. Un admin non può forzare DELIVERED→PENDING.
-// (Stripe webhook può portare PENDING→CONFIRMED o PENDING→PAYMENT_FAILED.)
+// Transizioni permesse. Un admin non può forzare DELIVERED→PENDING_PAYMENT.
+// PENDING_PAYMENT → CONFIRMED quando admin marca pagato il bonifico.
 const ORDER_STATUS_TRANSITIONS = Object.freeze({
-  AWAITING_APPROVAL: ['PENDING', 'CANCELLED'],
-  PENDING:        ['CONFIRMED', 'PAYMENT_FAILED', 'CANCELLED'],
-  PAYMENT_FAILED: ['PENDING', 'CANCELLED'],
-  CONFIRMED:      ['PROCESSING', 'CANCELLED', 'REFUNDED'],
-  PROCESSING:     ['SHIPPED', 'CANCELLED', 'REFUNDED'],
-  SHIPPED:        ['DELIVERED', 'REFUNDED'],
-  DELIVERED:      ['REFUNDED'],
-  CANCELLED:      [],
-  REFUNDED:       [],
+  AWAITING_APPROVAL: ['PENDING_PAYMENT', 'CANCELLED'],
+  PENDING_PAYMENT:   ['CONFIRMED', 'CANCELLED'],
+  CONFIRMED:         ['PROCESSING', 'CANCELLED', 'REFUNDED'],
+  PROCESSING:        ['SHIPPED', 'CANCELLED', 'REFUNDED'],
+  SHIPPED:           ['DELIVERED', 'REFUNDED'],
+  DELIVERED:         ['REFUNDED'],
+  CANCELLED:         [],
+  REFUNDED:          [],
 });
 
 // Stati Company (schema.prisma:21 + business rules)
 const COMPANY_STATUSES = Object.freeze(['PENDING', 'APPROVED', 'REJECTED', 'SUSPENDED']);
+
+// Metodi di pagamento supportati. Solo bonifico per ora.
+const PAYMENT_METHODS = Object.freeze(['BANK_TRANSFER']);
 
 // Max length campi free-text (usati da controller per slice/validation)
 const MAX_LEN = Object.freeze({
@@ -54,5 +56,6 @@ module.exports = {
   ORDER_STATUSES,
   ORDER_STATUS_TRANSITIONS,
   COMPANY_STATUSES,
+  PAYMENT_METHODS,
   MAX_LEN,
 };

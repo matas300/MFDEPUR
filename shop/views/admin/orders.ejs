@@ -95,7 +95,7 @@
           <td><%= new Date(order.createdAt).toLocaleDateString('it-IT') %></td>
           <td><%= order._count ? order._count.items : '—' %></td>
           <td><strong><%= formatEuro(order.total) %></strong></td>
-          <td><%= order.paymentMethod === 'STRIPE' ? 'Carta' : 'Bonifico' %></td>
+          <td>Bonifico</td>
           <td><span class="order-status order-status--<%= order.status.toLowerCase() %>"><%= order.status %></span></td>
           <td><a href="/admin/orders/<%= order.id %>" class="btn btn-outline btn-sm">Apri</a></td>
         </tr>

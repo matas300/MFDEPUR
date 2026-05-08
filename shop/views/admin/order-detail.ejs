@@ -45,6 +45,14 @@
       </div>
     <% } %>
 
+    <% if (order.status === 'PENDING_PAYMENT') { %>
+      <div class="alert alert-info" style="margin:1rem 0">
+        <h3 style="margin-top:0">In attesa di pagamento</h3>
+        <p>Ordine in attesa di bonifico. Verifica l'estratto conto e marca come pagato quando il bonifico è ricevuto.</p>
+        <button type="button" class="btn btn-primary js-open-mark-paid">Marca pagato</button>
+      </div>
+    <% } %>
+
     <table class="order-items-table">
       <thead>
         <tr>
@@ -92,9 +100,9 @@
       </div>
       <div>
         <h4>Pagamento</h4>
-        <p><%= order.paymentMethod === 'STRIPE' ? 'Carta di credito/debito' : 'Bonifico bancario' %>
+        <p>Bonifico bancario
         <% if (order.paidAt) { %><br><span style="color:var(--text-muted)">Pagato: <%= new Date(order.paidAt).toLocaleDateString('it-IT') %></span><% } %>
-        <% if (order.paymentIntentId) { %><br><small style="color:var(--text-muted)">PI: <%= order.paymentIntentId %></small><% } %></p>
+        <% if (order.paymentReference) { %><br><small style="color:var(--text-muted)">CRO: <%= order.paymentReference %></small><% } %></p>
       </div>
       <% if (order.address) { %>
         <div>
@@ -156,5 +164,9 @@
 
   </div>
 </div>
+
+<% if (order.status === 'PENDING_PAYMENT') { %>
+  <%- include('./_mark-paid-modal', { order }) %>
+<% } %>
 
 <%- include('../partials/_admin-footer') %>

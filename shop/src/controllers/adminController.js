@@ -35,10 +35,10 @@ exports.getDashboard = async (req, res) => {
     ordersWeek,
     awaitingApproval,
   ] = await Promise.all([
-    prisma.order.count({ where: { status: { notIn: ['PENDING', 'PAYMENT_FAILED', 'CANCELLED', 'AWAITING_APPROVAL'] } } }),
-    prisma.order.count({ where: { createdAt: { gte: startOfMonth }, status: { notIn: ['PENDING', 'PAYMENT_FAILED', 'CANCELLED', 'AWAITING_APPROVAL'] } } }),
-    prisma.order.aggregate({ _sum: { total: true }, where: { status: { notIn: ['PENDING', 'PAYMENT_FAILED', 'CANCELLED', 'AWAITING_APPROVAL'] } } }),
-    prisma.order.aggregate({ _sum: { total: true }, where: { createdAt: { gte: startOfMonth }, status: { notIn: ['PENDING', 'PAYMENT_FAILED', 'CANCELLED', 'AWAITING_APPROVAL'] } } }),
+    prisma.order.count({ where: { status: { notIn: ['PENDING_PAYMENT', 'CANCELLED', 'AWAITING_APPROVAL'] } } }),
+    prisma.order.count({ where: { createdAt: { gte: startOfMonth }, status: { notIn: ['PENDING_PAYMENT', 'CANCELLED', 'AWAITING_APPROVAL'] } } }),
+    prisma.order.aggregate({ _sum: { total: true }, where: { status: { notIn: ['PENDING_PAYMENT', 'CANCELLED', 'AWAITING_APPROVAL'] } } }),
+    prisma.order.aggregate({ _sum: { total: true }, where: { createdAt: { gte: startOfMonth }, status: { notIn: ['PENDING_PAYMENT', 'CANCELLED', 'AWAITING_APPROVAL'] } } }),
     prisma.company.count({ where: { status: 'PENDING' } }),
     prisma.product.count({ where: { isActive: true } }),
     prisma.$queryRaw`SELECT id, name, sku, stock, "lowStockAlert" FROM "Product" WHERE "isActive" = true AND stock <= "lowStockAlert" LIMIT 10`,
@@ -48,14 +48,14 @@ exports.getDashboard = async (req, res) => {
       include: { company: true, user: { select: { firstName: true, lastName: true } } },
     }),
     prisma.order.findMany({
-      where: { createdAt: { gte: thirtyDaysAgo }, status: { notIn: ['PENDING', 'PAYMENT_FAILED', 'CANCELLED', 'AWAITING_APPROVAL'] } },
+      where: { createdAt: { gte: thirtyDaysAgo }, status: { notIn: ['PENDING_PAYMENT', 'CANCELLED', 'AWAITING_APPROVAL'] } },
       select: { createdAt: true, total: true },
     }),
     prisma.order.count({
-      where: { createdAt: { gte: startOfDay }, status: { notIn: ['PENDING', 'PAYMENT_FAILED', 'CANCELLED', 'AWAITING_APPROVAL'] } },
+      where: { createdAt: { gte: startOfDay }, status: { notIn: ['PENDING_PAYMENT', 'CANCELLED', 'AWAITING_APPROVAL'] } },
     }),
     prisma.order.count({
-      where: { createdAt: { gte: startOfWeek }, status: { notIn: ['PENDING', 'PAYMENT_FAILED', 'CANCELLED', 'AWAITING_APPROVAL'] } },
+      where: { createdAt: { gte: startOfWeek }, status: { notIn: ['PENDING_PAYMENT', 'CANCELLED', 'AWAITING_APPROVAL'] } },
     }),
     prisma.order.count({ where: { status: 'AWAITING_APPROVAL' } }),
   ]);
@@ -215,7 +215,7 @@ exports.exportOrdersCSV = async (req, res) => {
     parseFloat(o.taxAmount).toFixed(2),
     parseFloat(o.shippingCost).toFixed(2),
     parseFloat(o.total).toFixed(2),
-    o.paymentMethod === 'STRIPE' ? 'Carta' : 'Bonifico',
+    'Bonifico',
     o.paidAt ? new Date(o.paidAt).toISOString() : '',
     o.shippedAt ? new Date(o.shippedAt).toISOString() : '',
     o.deliveredAt ? new Date(o.deliveredAt).toISOString() : '',
@@ -380,12 +380,12 @@ async function _adminTransitionApproval(req, res, targetStatus, action) {
     },
   });
 
-  const tplName = targetStatus === 'PENDING' ? 'sendOrderApproved' : 'sendOrderRejected';
+  const tplName = targetStatus === 'PENDING_PAYMENT' ? 'sendOrderApproved' : 'sendOrderRejected';
   if (typeof emailUtil[tplName] === 'function' && order.user?.email) {
     await emailUtil[tplName](order, order.user).catch(err =>
       logEmailFailure({
         to: order.user.email,
-        subject: `Ordine ${order.orderNumber} ${targetStatus === 'PENDING' ? 'approvato' : 'rifiutato'}`,
+        subject: `Ordine ${order.orderNumber} ${targetStatus === 'PENDING_PAYMENT' ? 'approvato' : 'rifiutato'}`,
         templateName: tplName,
         err,
         context: { orderId: order.id },
@@ -396,8 +396,106 @@ async function _adminTransitionApproval(req, res, targetStatus, action) {
   return res.redirect(`/admin/orders/${order.id}?updated=1`);
 }
 
-exports.approveOrder = (req, res) => _adminTransitionApproval(req, res, 'PENDING', 'ORDER_APPROVE');
+exports.approveOrder = (req, res) => _adminTransitionApproval(req, res, 'PENDING_PAYMENT', 'ORDER_APPROVE');
 exports.rejectOrder = (req, res) => _adminTransitionApproval(req, res, 'CANCELLED', 'ORDER_REJECT');
+
+// POST /admin/orders/:id/mark-paid — riconciliazione bonifico
+// Atomica: PENDING_PAYMENT → CONFIRMED + decrement stock per ogni item + paymentReference + paidAt
+exports.markOrderAsPaid = async (req, res) => {
+  const { id } = req.params;
+  const { paymentReference, paidAt } = req.body;
+
+  const order = await prisma.order.findUnique({
+    where: { id },
+    include: { items: true, user: true },
+  });
+  if (!order) {
+    return res.status(404).render('error', { message: 'Ordine non trovato', code: 404 });
+  }
+  if (order.status !== 'PENDING_PAYMENT') {
+    return res.status(409).render('error', {
+      message: `Impossibile marcare pagato: ordine in stato ${order.status}`,
+      code: 409,
+    });
+  }
+
+  // Parse paidAt: se YYYY-MM-DD, fissa ora locale a 00:00 (evita off-by-one timezone)
+  let paidDate;
+  if (paidAt) {
+    const d = /^\d{4}-\d{2}-\d{2}$/.test(String(paidAt))
+      ? new Date(`${paidAt}T00:00:00`)
+      : new Date(paidAt);
+    paidDate = isNaN(d) ? new Date() : d;
+  } else {
+    paidDate = new Date();
+  }
+
+  const refClean = paymentReference ? String(paymentReference).trim().slice(0, 100) : null;
+
+  // Atomico: decrementa stock di ogni item + aggiorna ordine, in transazione singola.
+  // updateMany con WHERE stock>=qty previene oversell anche con concorrenza.
+  try {
+    await prisma.$transaction(async (tx) => {
+      for (const item of order.items) {
+        const upd = await tx.product.updateMany({
+          where: { id: item.productId, stock: { gte: item.quantity } },
+          data: { stock: { decrement: item.quantity } },
+        });
+        if (upd.count === 0) {
+          const err = new Error(`Stock insufficiente per ${item.productName}`);
+          err.code = 'INSUFFICIENT_STOCK';
+          throw err;
+        }
+      }
+      await tx.order.update({
+        where: { id },
+        data: {
+          status: 'CONFIRMED',
+          paidAt: paidDate,
+          paymentReference: refClean || null,
+        },
+      });
+    });
+  } catch (err) {
+    if (err.code === 'INSUFFICIENT_STOCK') {
+      return res.status(409).render('error', { message: err.message, code: 409 });
+    }
+    throw err;
+  }
+
+  await logAudit(req, {
+    action: 'PAYMENT_CONFIRMED',
+    entityType: 'Order',
+    entityId: id,
+    metadata: {
+      paymentReference: refClean || null,
+      paidAt: paidDate.toISOString(),
+      oldStatus: 'PENDING_PAYMENT',
+      newStatus: 'CONFIRMED',
+      orderNumber: order.orderNumber,
+    },
+  });
+
+  // Email cliente "pagamento ricevuto" — failure non blocca (logEmailFailure)
+  const updated = await prisma.order.findUnique({
+    where: { id },
+    include: { user: true },
+  });
+  if (updated.user?.email) {
+    await emailUtil.sendPaymentReceived(updated, updated.user).catch(err =>
+      logEmailFailure({
+        to: updated.user.email,
+        subject: `Pagamento ricevuto — ordine ${updated.orderNumber}`,
+        templateName: 'sendPaymentReceived',
+        err,
+        context: { orderId: id },
+      })
+    );
+  }
+
+  if (req.accepts('json')) return res.json({ ok: true, status: 'CONFIRMED' });
+  return res.redirect(`/admin/orders/${id}?paid=1`);
+};
 
 // ── Aziende clienti ───────────────────────────────────────────────────────────
 

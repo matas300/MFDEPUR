@@ -73,12 +73,12 @@ async function _transitionApproval(req, res, targetStatus, action) {
   });
 
   // Email al BUYER
-  const tplName = targetStatus === 'PENDING' ? 'sendOrderApproved' : 'sendOrderRejected';
+  const tplName = targetStatus === 'PENDING_PAYMENT' ? 'sendOrderApproved' : 'sendOrderRejected';
   if (typeof emailUtil[tplName] === 'function' && order.user?.email) {
     await emailUtil[tplName](order, order.user).catch(err =>
       logEmailFailure({
         to: order.user.email,
-        subject: `Ordine ${order.orderNumber} ${targetStatus === 'PENDING' ? 'approvato' : 'rifiutato'}`,
+        subject: `Ordine ${order.orderNumber} ${targetStatus === 'PENDING_PAYMENT' ? 'approvato' : 'rifiutato'}`,
         templateName: tplName,
         err,
         context: { orderId: order.id },
@@ -89,5 +89,5 @@ async function _transitionApproval(req, res, targetStatus, action) {
   return res.redirect(`/company/orders/${order.id}`);
 }
 
-exports.approveOrder = (req, res) => _transitionApproval(req, res, 'PENDING', 'ORDER_APPROVE');
+exports.approveOrder = (req, res) => _transitionApproval(req, res, 'PENDING_PAYMENT', 'ORDER_APPROVE');
 exports.rejectOrder = (req, res) => _transitionApproval(req, res, 'CANCELLED', 'ORDER_REJECT');

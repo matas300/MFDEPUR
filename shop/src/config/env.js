@@ -12,10 +12,13 @@ const REQUIRED = [
   // Auth expiry — default string zod-like
   { name: 'JWT_EXPIRES_IN' },
   { name: 'JWT_REFRESH_EXPIRES_IN' },
-  // Stripe — fail-fast sempre (no fallback silent)
-  { name: 'STRIPE_SECRET_KEY' },
-  { name: 'STRIPE_PUBLISHABLE_KEY' },
-  { name: 'STRIPE_WEBHOOK_SECRET' },
+  // Bonifico bancario (visualizzato a cliente al checkout) — fail-fast
+  { name: 'BANK_BENEFICIARY' },
+  { name: 'BANK_IBAN' },
+  { name: 'BANK_NAME' },
+  // Email commercialista (cron CSV settimanale)
+  { name: 'ACCOUNTANT_EMAIL' },
+  { name: 'ACCOUNTANT_NAME' },
   // DB
   { name: 'DATABASE_URL' },
 ];
