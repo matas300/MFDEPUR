@@ -91,7 +91,7 @@
       <div>
         <h4>Pagamento</h4>
         <p style="color:var(--text-muted)">
-          <%= order.paymentMethod === 'STRIPE' ? 'Carta di credito/debito' : 'Bonifico bancario' %><br>
+          Bonifico bancario<br>
           <% if (order.paidAt) { %>
             Pagato il: <%= new Date(order.paidAt).toLocaleDateString('it-IT') %>
           <% } %>
