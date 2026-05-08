@@ -16,9 +16,11 @@ npm-debug.log*
 dist/
 .cache/
 
-# Database locale (SQLite dev)
+# Database locale (SQLite dev/test)
 shop/prisma/dev.db
 shop/prisma/dev.db-journal
+shop/prisma/test.db
+shop/prisma/test.db-journal
 shop/prisma/*.db-shm
 shop/prisma/*.db-wal
 
