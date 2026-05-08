@@ -30,9 +30,11 @@ describe('env validator', () => {
       CSRF_SECRET: 'x'.repeat(32),
       JWT_EXPIRES_IN: '15m',
       JWT_REFRESH_EXPIRES_IN: '7d',
-      STRIPE_SECRET_KEY: 'sk_test',
-      STRIPE_PUBLISHABLE_KEY: 'pk_test',
-      STRIPE_WEBHOOK_SECRET: 'whsec_test',
+      BANK_BENEFICIARY: 'MF Depur Test',
+      BANK_IBAN: 'IT00 X000 0000 0000',
+      BANK_NAME: 'Banca Test',
+      ACCOUNTANT_EMAIL: 'comm@t.l',
+      ACCOUNTANT_NAME: 'Studio Test',
       DATABASE_URL: 'file:./x.db',
     });
     expect(r.status).toBe(1);
@@ -47,9 +49,11 @@ describe('env validator', () => {
       CSRF_SECRET: 'x'.repeat(32),
       JWT_EXPIRES_IN: '15m',
       JWT_REFRESH_EXPIRES_IN: '7d',
-      STRIPE_SECRET_KEY: 'sk_test',
-      STRIPE_PUBLISHABLE_KEY: 'pk_test',
-      STRIPE_WEBHOOK_SECRET: 'whsec_test',
+      BANK_BENEFICIARY: 'MF Depur Test',
+      BANK_IBAN: 'IT00 X000 0000 0000',
+      BANK_NAME: 'Banca Test',
+      ACCOUNTANT_EMAIL: 'comm@t.l',
+      ACCOUNTANT_NAME: 'Studio Test',
       DATABASE_URL: 'file:./x.db',
     });
     expect(r.status).toBe(0);
