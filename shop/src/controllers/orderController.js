@@ -1,7 +1,5 @@
 const prisma = require('../config/database');
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const emailUtil = require('../utils/email');
-const { logAudit } = require('../utils/audit');
 const { logEmailFailure } = require('../utils/emailLogger');
 
 // ── Idempotency cache ─────────────────────────────────────────────────────────
@@ -64,15 +62,21 @@ exports.getCheckout = async (req, res) => {
     cart,
     addresses,
     totals: { subtotal, taxAmount, total, shippingCost: 0 },
-    stripePublicKey: process.env.STRIPE_PUBLISHABLE_KEY,
+    bank: {
+      beneficiary: process.env.BANK_BENEFICIARY,
+      iban: process.env.BANK_IBAN,
+      name: process.env.BANK_NAME,
+      bic: process.env.BANK_BIC || null,
+    },
     title: 'Checkout',
     idempotencyKey,
   });
 };
 
-// POST /shop/checkout  — crea Stripe PaymentIntent e ordine PENDING
+// POST /shop/checkout  — crea ordine PENDING_PAYMENT (bonifico-only)
 exports.postCheckout = async (req, res) => {
-  const { addressId, notes, paymentMethod = 'STRIPE' } = req.body;
+  const { addressId, notes } = req.body;
+  const paymentMethod = 'BANK_TRANSFER';
 
   // Idempotency: blocca double-submit (5 min TTL)
   const idempotencyKey = req.body.idempotencyKey || req.get('idempotency-key');
@@ -136,7 +140,7 @@ exports.postCheckout = async (req, res) => {
         companyId: req.user.companyId,
         addressId: addressId || null,
         status: 'AWAITING_APPROVAL',
-        paymentMethod: paymentMethod.toUpperCase(),
+        paymentMethod: 'BANK_TRANSFER',
         subtotal,
         taxAmount,
         shippingCost,
@@ -181,15 +185,16 @@ exports.postCheckout = async (req, res) => {
 
   const orderNumber = await generateOrderNumber();
 
-  // Crea ordine PENDING
+  // Crea ordine PENDING_PAYMENT. Status NON viene avanzato a CONFIRMED qui;
+  // l'admin lo farà via markOrderAsPaid una volta ricevuto il bonifico.
   const order = await prisma.order.create({
     data: {
       orderNumber,
       userId: req.user.id,
       companyId: req.user.companyId,
       addressId: addressId || null,
-      status: 'PENDING',
-      paymentMethod: paymentMethod.toUpperCase(),
+      status: 'PENDING_PAYMENT',
+      paymentMethod: 'BANK_TRANSFER',
       subtotal,
       taxAmount,
       shippingCost,
@@ -210,34 +215,34 @@ exports.postCheckout = async (req, res) => {
     include: { items: true, company: true },
   });
 
-  // Registra idempotency key dopo creazione ordine
   if (idempotencyKey) idempotencySet(idempotencyKey, order.id);
 
-  if (paymentMethod === 'BANK_TRANSFER') {
-    // Per bonifico: finalize atomico (status + stock) e post-processing (email/cart clear).
-    // Se lo stock è insufficiente (race), _finalizeOrder lancia INSUFFICIENT_STOCK.
-    const finalized = await _finalizeOrder(order.id);
-    await _postFinalize(finalized, cart, req.user);
-    return res.redirect(`/shop/checkout/success?orderId=${order.id}`);
-  }
+  // Svuota carrello (l'ordine è creato, anche se non ancora pagato)
+  await prisma.cartItem.deleteMany({ where: { cartId: cart.id } });
 
-  // Stripe: crea PaymentIntent
-  const paymentIntent = await stripe.paymentIntents.create({
-    amount: Math.round(total * 100), // centesimi
-    currency: 'eur',
-    metadata: { orderId: order.id, orderNumber },
-    receipt_email: req.user.email,
-  });
+  // Email cliente: conferma ordine + IBAN per bonifico (template aggiornato in Task 7)
+  await emailUtil.sendOrderConfirmation(order, req.user).catch(err =>
+    logEmailFailure({
+      to: req.user.email,
+      subject: `Ordine ${order.orderNumber} ricevuto`,
+      templateName: 'sendOrderConfirmation',
+      err,
+      context: { orderId: order.id },
+    })
+  );
 
-  await prisma.order.update({
-    where: { id: order.id },
-    data: { paymentIntentId: paymentIntent.id },
-  });
+  // Email admin: notifica nuovo ordine in attesa pagamento (riusa funzione esistente)
+  await emailUtil.sendNewOrderNotificationAdmin(order, order.company).catch(err =>
+    logEmailFailure({
+      to: process.env.ADMIN_EMAIL || process.env.EMAIL_FROM,
+      subject: `Nuovo ordine ${order.orderNumber}`,
+      templateName: 'sendNewOrderNotificationAdmin',
+      err,
+      context: { orderId: order.id },
+    })
+  );
 
-  res.json({
-    clientSecret: paymentIntent.client_secret,
-    orderId: order.id,
-  });
+  return res.redirect(`/shop/checkout/success?orderId=${order.id}`);
 };
 
 // GET /shop/checkout/success
@@ -253,83 +258,6 @@ exports.checkoutSuccess = async (req, res) => {
 
 // GET /shop/checkout/cancel
 exports.checkoutCancel = (req, res) => res.redirect('/shop/cart');
-
-// POST /stripe/webhook  (registrata in app.js con rawBody)
-exports.stripeWebhook = async (req, res) => {
-  const secret = process.env.STRIPE_WEBHOOK_SECRET;
-  // Fail-close: senza secret o senza rawBody niente webhook. Evita che in dev
-  // un qualunque POST su /stripe/webhook possa modificare ordini.
-  if (!secret) {
-    console.error('[stripe-webhook] STRIPE_WEBHOOK_SECRET non configurato — rifiuto');
-    return res.status(500).send('Webhook non configurato');
-  }
-  if (!req.rawBody) {
-    return res.status(400).send('Raw body mancante');
-  }
-  const sig = req.headers['stripe-signature'];
-  if (!sig) return res.status(400).send('Firma mancante');
-
-  let event;
-  try {
-    event = stripe.webhooks.constructEvent(req.rawBody, sig, secret);
-  } catch (err) {
-    // Persist invalid-sig in AuditLog — best-effort, non-blocking
-    await logAudit(req, {
-      action: 'STRIPE_WEBHOOK_INVALID_SIG',
-      entityType: 'Webhook',
-      entityId: null,
-      metadata: { error: err.message?.slice(0, 500) },
-    });
-    console.warn('[stripe-webhook] firma non valida:', err.message);
-    return res.status(400).send(`Webhook error: ${err.message}`);
-  }
-
-  if (event.type === 'payment_intent.succeeded') {
-    const pi = event.data.object;
-    const order = await prisma.order.findFirst({
-      where: { paymentIntentId: pi.id },
-      include: { items: true, company: true, user: true },
-    });
-    if (order) {
-      // Retry-aware: errori transienti (DB giù) → 500 e Stripe ritenta.
-      // Errori di business (stock insufficiente / stato ordine invalido) → 200,
-      // marchia PAYMENT_FAILED. Non ha senso ritentare: il pagamento è già
-      // incassato lato Stripe, servirà refund manuale.
-      try {
-        const finalized = await _finalizeOrder(order.id, { paymentIntentId: pi.id });
-        const cart = await prisma.cart.findUnique({
-          where: { userId: order.userId },
-          include: { items: true },
-        });
-        await _postFinalize(finalized, cart, order.user);
-      } catch (err) {
-        console.error('[stripe-webhook] _finalizeOrder fallito:', err.message);
-        if (err.code === 'INSUFFICIENT_STOCK' || err.code === 'ORDER_INVALID_STATE') {
-          await prisma.order.update({
-            where: { id: order.id },
-            data: {
-              status: 'PAYMENT_FAILED',
-              adminNotes: `Finalize fallito: ${err.message}`.slice(0, 500),
-            },
-          }).catch(() => {}); // idempotent best-effort
-          return res.status(200).json({ received: true, warning: err.message });
-        }
-        // Errore transiente: 500 → Stripe ritenta.
-        return res.status(500).json({ error: 'transient failure, please retry' });
-      }
-    }
-  }
-
-  if (event.type === 'payment_intent.payment_failed') {
-    const pi = event.data.object;
-    await prisma.order.updateMany({
-      where: { paymentIntentId: pi.id },
-      data: { status: 'PAYMENT_FAILED' },
-    });
-  }
-
-  res.json({ received: true });
-};
 
 // Account ordini
 exports.getMyOrders = async (req, res) => {
@@ -373,7 +301,7 @@ async function _finalizeOrder(orderId, { paidAt = new Date(), paymentIntentId = 
     if (order.status === 'CONFIRMED') {
       return order; // idempotent: già confermato
     }
-    if (order.status !== 'PENDING' && order.status !== 'PAYMENT_FAILED') {
+    if (order.status !== 'PENDING_PAYMENT') {
       const e = new Error(`Cannot finalize order in status ${order.status}`);
       e.code = 'ORDER_INVALID_STATE';
       throw e;
