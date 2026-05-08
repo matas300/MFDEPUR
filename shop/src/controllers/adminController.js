@@ -380,12 +380,12 @@ async function _adminTransitionApproval(req, res, targetStatus, action) {
     },
   });
 
-  const tplName = targetStatus === 'PENDING' ? 'sendOrderApproved' : 'sendOrderRejected';
+  const tplName = targetStatus === 'PENDING_PAYMENT' ? 'sendOrderApproved' : 'sendOrderRejected';
   if (typeof emailUtil[tplName] === 'function' && order.user?.email) {
     await emailUtil[tplName](order, order.user).catch(err =>
       logEmailFailure({
         to: order.user.email,
-        subject: `Ordine ${order.orderNumber} ${targetStatus === 'PENDING' ? 'approvato' : 'rifiutato'}`,
+        subject: `Ordine ${order.orderNumber} ${targetStatus === 'PENDING_PAYMENT' ? 'approvato' : 'rifiutato'}`,
         templateName: tplName,
         err,
         context: { orderId: order.id },
@@ -396,7 +396,7 @@ async function _adminTransitionApproval(req, res, targetStatus, action) {
   return res.redirect(`/admin/orders/${order.id}?updated=1`);
 }
 
-exports.approveOrder = (req, res) => _adminTransitionApproval(req, res, 'PENDING', 'ORDER_APPROVE');
+exports.approveOrder = (req, res) => _adminTransitionApproval(req, res, 'PENDING_PAYMENT', 'ORDER_APPROVE');
 exports.rejectOrder = (req, res) => _adminTransitionApproval(req, res, 'CANCELLED', 'ORDER_REJECT');
 
 // ── Aziende clienti ───────────────────────────────────────────────────────────

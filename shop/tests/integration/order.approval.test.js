@@ -93,7 +93,7 @@ describe('Approval workflow su postCheckout (requiresOrderApproval)', () => {
     expect(prodAfter.stock).toBe(stockBefore);
   });
 
-  it('COMPANY_ADMIN con company.requiresOrderApproval=true → flusso normale (CONFIRMED via BANK_TRANSFER)', async () => {
+  it('COMPANY_ADMIN con company.requiresOrderApproval=true → flusso normale (PENDING_PAYMENT via BANK_TRANSFER)', async () => {
     const company = await seedCompany({ name: 'Approva2 SRL', requiresOrderApproval: true });
     const admin = await seedUser({
       company,
@@ -122,13 +122,14 @@ describe('Approval workflow su postCheckout (requiresOrderApproval)', () => {
 
     const orders = await prisma.order.findMany({ where: { userId: admin.id } });
     expect(orders).toHaveLength(1);
-    expect(orders[0].status).toBe('CONFIRMED');
+    expect(orders[0].status).toBe('PENDING_PAYMENT');
+    expect(orders[0].paidAt).toBeNull();
 
     const prodAfter = await prisma.product.findUnique({ where: { id: prod.id } });
-    expect(prodAfter.stock).toBe(stockBefore - 2);
+    expect(prodAfter.stock).toBe(stockBefore);
   });
 
-  it('COMPANY_ADMIN approva un ordine AWAITING_APPROVAL della propria company → status PENDING + audit', async () => {
+  it('COMPANY_ADMIN approva un ordine AWAITING_APPROVAL della propria company → status PENDING_PAYMENT + audit', async () => {
     const company = await seedCompany({ name: 'ApprovaCA SRL', requiresOrderApproval: true });
     const buyer = await seedUser({
       company,
@@ -174,7 +175,7 @@ describe('Approval workflow su postCheckout (requiresOrderApproval)', () => {
     expect([302, 303]).toContain(res.status);
 
     const after = await prisma.order.findUnique({ where: { id: order.id } });
-    expect(after.status).toBe('PENDING');
+    expect(after.status).toBe('PENDING_PAYMENT');
 
     const audit = await prisma.auditLog.findFirst({
       where: { entityType: 'Order', entityId: order.id, action: 'ORDER_APPROVE' },
@@ -232,7 +233,7 @@ describe('Approval workflow su postCheckout (requiresOrderApproval)', () => {
     expect(audit).toBeTruthy();
   });
 
-  it('BUYER con company.requiresOrderApproval=false → flusso normale (CONFIRMED via BANK_TRANSFER)', async () => {
+  it('BUYER con company.requiresOrderApproval=false → flusso normale (PENDING_PAYMENT via BANK_TRANSFER)', async () => {
     const company = await seedCompany({ name: 'NoApprova SRL', requiresOrderApproval: false });
     const buyer = await seedUser({
       company,
@@ -261,9 +262,10 @@ describe('Approval workflow su postCheckout (requiresOrderApproval)', () => {
 
     const orders = await prisma.order.findMany({ where: { userId: buyer.id } });
     expect(orders).toHaveLength(1);
-    expect(orders[0].status).toBe('CONFIRMED');
+    expect(orders[0].status).toBe('PENDING_PAYMENT');
+    expect(orders[0].paidAt).toBeNull();
 
     const prodAfter = await prisma.product.findUnique({ where: { id: prod.id } });
-    expect(prodAfter.stock).toBe(stockBefore - 2);
+    expect(prodAfter.stock).toBe(stockBefore);
   });
 });
