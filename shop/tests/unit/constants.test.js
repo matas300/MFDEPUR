@@ -5,6 +5,7 @@ const {
   COMPANY_STATUSES,
   COMPANY_ROLES,
   CARRIERS,
+  PAYMENT_METHODS,
   MAX_LEN,
 } = require('../../src/config/constants');
 
@@ -13,9 +14,9 @@ describe('constants', () => {
     expect(TAX_RATE).toBe(0.22);
   });
 
-  it('ORDER_STATUSES contiene i 9 stati business', () => {
+  it('ORDER_STATUSES contiene gli 8 stati business (no PAYMENT_FAILED post-Stripe-removal)', () => {
     expect(ORDER_STATUSES).toEqual([
-      'AWAITING_APPROVAL', 'PENDING', 'PAYMENT_FAILED', 'CONFIRMED', 'PROCESSING',
+      'AWAITING_APPROVAL', 'PENDING_PAYMENT', 'CONFIRMED', 'PROCESSING',
       'SHIPPED', 'DELIVERED', 'CANCELLED', 'REFUNDED',
     ]);
   });
@@ -34,9 +35,9 @@ describe('constants', () => {
     expect(ORDER_STATUS_TRANSITIONS.REFUNDED).toEqual([]);
   });
 
-  it('PENDING può andare a CONFIRMED/PAYMENT_FAILED/CANCELLED', () => {
-    expect(ORDER_STATUS_TRANSITIONS.PENDING).toEqual(
-      expect.arrayContaining(['CONFIRMED', 'PAYMENT_FAILED', 'CANCELLED'])
+  it('PENDING_PAYMENT può andare a CONFIRMED/CANCELLED', () => {
+    expect(ORDER_STATUS_TRANSITIONS.PENDING_PAYMENT).toEqual(
+      expect.arrayContaining(['CONFIRMED', 'CANCELLED'])
     );
   });
 
@@ -60,5 +61,10 @@ describe('constants', () => {
     expect(CARRIERS).toContain('DHL');
     expect(CARRIERS).toContain('ALTRO');
     expect(CARRIERS.length).toBe(8);
+  });
+
+  it('PAYMENT_METHODS è frozen e contiene solo BANK_TRANSFER', () => {
+    expect(Object.isFrozen(PAYMENT_METHODS)).toBe(true);
+    expect(PAYMENT_METHODS).toEqual(['BANK_TRANSFER']);
   });
 });
